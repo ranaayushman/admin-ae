@@ -13,14 +13,19 @@ import {
   Settings,
   PanelLeftClose,
   PanelRightClose,
+  Users,
 } from "lucide-react";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Add PYQ to Bank", icon: BookOpen, path: "/pyq" },
-  { name: "Create Test Series", icon: ListChecks, path: "/test-series/create" },
-  { name: "PYQ Home (With Solution)", icon: FileText, path: "/pyq-home/with-solution" },
+  { name: "Question Bank", icon: HelpCircle, path: "/questions" },
+  { name: "Add Question", icon: BookOpen, path: "/pyq" },
+  { name: "Test Series", icon: ListChecks, path: "/test-series" },
+  { name: "Packages", icon: FileText, path: "/packages" },
+  { name: "Manual Enrollment", icon: Users, path: "/enrollments/manual" },
+  { name: "PYQ Home (With Solution)", icon: ImageIcon, path: "/pyq-home/with-solution" },
   { name: "PYQ Home (No Solution)", icon: ImageIcon, path: "/pyq-home/without-solution" },
+  { name: "Footer Links", icon: Settings, path: "/settings/footer" },
   { name: "Settings", icon: Settings, path: "/settings" },
 ];
 
