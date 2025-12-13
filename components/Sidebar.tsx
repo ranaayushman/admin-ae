@@ -16,13 +16,12 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { name: "Dashboard", icon: LayoutDashboard, path: "/admin" },
-  { name: "Add PYQ", icon: BookOpen, path: "/pyq" },
-  { name: "Add PYQ Solution", icon: FileText, path: "/admin/pyq-solution" },
-  { name: "Upload Banner", icon: ImageIcon, path: "/admin/banner" },
-  { name: "Create Test Series", icon: ListChecks, path: "/admin/test-series" },
-  { name: "Add Questions", icon: HelpCircle, path: "/admin/questions" },
-  { name: "Settings", icon: Settings, path: "/admin/settings" },
+  { name: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { name: "Add PYQ to Bank", icon: BookOpen, path: "/pyq" },
+  { name: "Create Test Series", icon: ListChecks, path: "/test-series/create" },
+  { name: "PYQ Home (With Solution)", icon: FileText, path: "/pyq-home/with-solution" },
+  { name: "PYQ Home (No Solution)", icon: ImageIcon, path: "/pyq-home/without-solution" },
+  { name: "Settings", icon: Settings, path: "/settings" },
 ];
 
 export default function Sidebar({ collapsed, setCollapsed }) {
