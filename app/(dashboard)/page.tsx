@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -18,74 +18,43 @@ import {
   TrendingUp,
   Clock,
   CheckCircle2,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Mock data - Replace with actual API calls
-const mockRecentRegistrations = [
-  {
-    id: "user_1",
-    name: "Rahul Sharma",
-    email: "rahul@example.com",
-    registeredAt: "2 hours ago",
-    verified: true,
-  },
-  {
-    id: "user_2",
-    name: "Priya Singh",
-    email: "priya@example.com",
-    registeredAt: "5 hours ago",
-    verified: true,
-  },
-  {
-    id: "user_3",
-    name: "Amit Patel",
-    email: "amit@example.com",
-    registeredAt: "1 day ago",
-    verified: false,
-  },
-];
-
-const mockRecentPurchases = [
-  {
-    id: "purchase_1",
-    userName: "Sneha Reddy",
-    productName: "JEE Main 2025 Test Series",
-    amount: 1999,
-    purchasedAt: "1 hour ago",
-    status: "completed",
-  },
-  {
-    id: "purchase_2",
-    userName: "Vikram Kumar",
-    productName: "NEET Complete Package",
-    amount: 2999,
-    purchasedAt: "3 hours ago",
-    status: "completed",
-  },
-  {
-    id: "purchase_3",
-    userName: "Ananya Gupta",
-    productName: "12th Board Practice Tests",
-    amount: 999,
-    purchasedAt: "6 hours ago",
-    status: "completed",
-  },
-];
-
-const mockQuestionStats = {
-  totalQuestions: 5420,
-  bySubject: {
-    Physics: 1840,
-    Chemistry: 1790,
-    Mathematics: 1790,
-  },
-  recentlyAdded: 45,
-};
+import {
+  getDashboardStats,
+  DashboardStats,
+} from "@/lib/services/dashboard.service";
 
 export default function DashboardPage() {
   const [bannerImage, setBannerImage] = useState("");
   const [bannerTitle, setBannerTitle] = useState("");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch dashboard stats
+  const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getDashboardStats();
+      setStats(data);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load dashboard";
+      setError(errorMessage);
+      console.error("Dashboard error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   const handleBannerUpdate = () => {
     if (!bannerImage || !bannerTitle) {
@@ -109,6 +78,42 @@ export default function DashboardPage() {
     setBannerTitle("");
   };
 
+  // Calculate total questions for percentage calculation
+  const totalQuestions = stats?.totalQuestions?.count || 0;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen p-6 bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen p-6 bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Failed to Load Dashboard
+            </h2>
+            <p className="text-gray-500 mb-4">{error}</p>
+            <Button onClick={fetchStats}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen p-6 bg-gray-50">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -117,9 +122,13 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-500 mt-1">
-              Welcome back! Here's what's happening.
+              Welcome back! Here&apos;s what&apos;s happening.
             </p>
           </div>
+          <Button variant="outline" onClick={fetchStats}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -132,10 +141,13 @@ export default function DashboardPage() {
               <Users className="w-4 h-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2,845</div>
+              <div className="text-2xl font-bold">
+                {stats?.totalUsers?.count?.toLocaleString() || 0}
+              </div>
               <p className="text-xs text-green-600 flex items-center mt-1">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                +12.5% from last month
+                {stats?.totalUsers?.growth || "0%"}{" "}
+                {stats?.totalUsers?.label || ""}
               </p>
             </CardContent>
           </Card>
@@ -148,10 +160,13 @@ export default function DashboardPage() {
               <ShoppingCart className="w-4 h-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹4,52,890</div>
+              <div className="text-2xl font-bold">
+                ₹{stats?.totalSales?.amount?.toLocaleString() || 0}
+              </div>
               <p className="text-xs text-green-600 flex items-center mt-1">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                +8.2% from last month
+                {stats?.totalSales?.growth || "0%"}{" "}
+                {stats?.totalSales?.label || ""}
               </p>
             </CardContent>
           </Card>
@@ -165,10 +180,11 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {mockQuestionStats.totalQuestions.toLocaleString()}
+                {stats?.totalQuestions?.count?.toLocaleString() || 0}
               </div>
               <p className="text-xs text-blue-600 flex items-center mt-1">
-                +{mockQuestionStats.recentlyAdded} added this week
+                +{stats?.totalQuestions?.added || 0}{" "}
+                {stats?.totalQuestions?.label || ""}
               </p>
             </CardContent>
           </Card>
@@ -181,9 +197,11 @@ export default function DashboardPage() {
               <CheckCircle2 className="w-4 h-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">128</div>
+              <div className="text-2xl font-bold">
+                {stats?.activeTests?.count || 0}
+              </div>
               <p className="text-xs text-gray-500 mt-1">
-                Across all packages
+                {stats?.activeTests?.label || "Across all packages"}
               </p>
             </CardContent>
           </Card>
@@ -199,34 +217,42 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockRecentRegistrations.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                        {user.name.charAt(0)}
+                {stats?.recentRegistrations?.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">
+                    No recent registrations
+                  </p>
+                ) : (
+                  stats?.recentRegistrations?.map((user, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                          {user.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {user.name}
+                          </p>
+                          <p className="text-sm text-gray-500">{user.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{user.name}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {user.timeAgo}
+                        </p>
+                        {user.verified && (
+                          <span className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Verified
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {user.registeredAt}
-                      </p>
-                      {user.verified && (
-                        <span className="text-xs text-green-600 flex items-center gap-1 mt-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Verified
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -239,30 +265,36 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockRecentPurchases.map((purchase) => (
-                  <div
-                    key={purchase.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {purchase.productName}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {purchase.userName}
-                      </p>
+                {stats?.recentPurchases?.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">
+                    No recent purchases
+                  </p>
+                ) : (
+                  stats?.recentPurchases?.map((purchase, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {purchase.packageName}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {purchase.buyerName}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-600">
+                          ₹{purchase.price?.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                          <Clock className="w-3 h-3" />
+                          {purchase.timeAgo}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-600">
-                        ₹{purchase.amount.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                        <Clock className="w-3 h-3" />
-                        {purchase.purchasedAt}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -272,40 +304,43 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Question Bank Statistics</CardTitle>
-            <CardDescription>
-              Overview of questions by subject
-            </CardDescription>
+            <CardDescription>Overview of questions by subject</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {Object.entries(mockQuestionStats.bySubject).map(
-                ([subject, count]) => (
-                  <div
-                    key={subject}
-                    className="p-4 rounded-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">
-                          {subject}
-                        </p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">
-                          {count.toLocaleString()}
-                        </p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {stats?.questionsBySubject &&
+                Object.entries(stats.questionsBySubject).map(
+                  ([subject, count]) => (
+                    <div
+                      key={subject}
+                      className="p-4 rounded-lg border border-gray-200 bg-gradient-to-br from-white to-gray-50"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">
+                            {subject}
+                          </p>
+                          <p className="text-2xl font-bold text-gray-900 mt-1">
+                            {count.toLocaleString()}
+                          </p>
+                        </div>
+                        <BookOpen className="w-8 h-8 text-gray-300" />
                       </div>
-                      <BookOpen className="w-8 h-8 text-gray-300" />
+                      <div className="mt-3 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{
+                            width: `${
+                              totalQuestions > 0
+                                ? (count / totalQuestions) * 100
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="mt-3 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{
-                          width: `${(count / mockQuestionStats.totalQuestions) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )
-              )}
+                  )
+                )}
             </div>
           </CardContent>
         </Card>

@@ -42,7 +42,7 @@ export default function AddTestsToPackagePage() {
   const [loading, setLoading] = useState(true);
   const [addingTestId, setAddingTestId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("published");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Get IDs of tests already in the package
@@ -182,8 +182,9 @@ export default function AddTestsToPackagePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="published">Published</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="UPCOMING">Upcoming</SelectItem>
+                  <SelectItem value="LIVE">Live</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
