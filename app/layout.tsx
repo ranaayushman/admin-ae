@@ -2,25 +2,21 @@
 
 import "./globals.css";
 import "katex/dist/katex.min.css";
-import { useState } from "react";
-import Sidebar from "@/components/Sidebar";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { Toaster } from "sonner";
 
-export default function RootLayout({ children }) {
-  const [collapsed, setCollapsed] = useState(false);
-
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className="flex">
-        <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-
-        <main
-          className="flex-1 min-h-screen transition-all duration-300 bg-gray-50"
-          style={{ marginLeft: collapsed ? "5rem" : "18rem" }}
-        >
+      <body>
+        <AuthProvider>
           {children}
           <Toaster richColors position="bottom-center" />
-        </main>
+        </AuthProvider>
       </body>
     </html>
   );

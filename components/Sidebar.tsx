@@ -14,7 +14,9 @@ import {
   PanelLeftClose,
   PanelRightClose,
   Users,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
@@ -29,12 +31,27 @@ const navItems = [
   { name: "Settings", icon: Settings, path: "/settings" },
 ];
 
-export default function Sidebar({ collapsed, setCollapsed }) {
+export default function Sidebar({
+  collapsed,
+  setCollapsed,
+}: {
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+}) {
   const pathname = usePathname();
+  const { logout, user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return (
     <aside
-      className={`h-screen bg-[#0f172a] text-white border-r border-white/10 fixed left-0 top-0 transition-all duration-300
+      className={`h-screen bg-[#0f172a] text-white border-r border-white/10 fixed left-0 top-0 transition-all duration-300 flex flex-col
       ${collapsed ? "w-20" : "w-72"}`}
     >
       {/* Header */}
@@ -94,6 +111,49 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           })}
         </ul>
       </nav>
+
+      {/* User Info & Logout */}
+      {user && !collapsed && (
+        <div className="px-4 py-3 border-t border-white/10">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-sm"
+          >
+            <p className="text-white font-medium truncate">{user.name}</p>
+            <p className="text-gray-400 text-xs truncate">{user.email}</p>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Logout Button */}
+      <div className="px-3 py-2 border-t border-white/10">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-300 hover:bg-red-500/10 hover:text-red-400 transition-all group"
+          title="Logout"
+        >
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="flex-shrink-0"
+          >
+            <LogOut className="w-5 h-5" />
+          </motion.div>
+
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                className="font-medium"
+              >
+                Logout
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+      </div>
 
       {/* Footer + Collapse Button */}
       <div className="px-4 py-4 border-t border-white/10 flex items-center justify-between">
