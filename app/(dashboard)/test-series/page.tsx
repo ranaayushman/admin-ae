@@ -17,11 +17,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { testService, type TestListItem } from "@/lib/services/test.service";
+import {
+  testService,
+  type AutoCreateTestPayload,
+  type TestListItem,
+} from "@/lib/services/test.service";
 
 export default function TestSeriesPage() {
   const [tests, setTests] = useState<TestListItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [autoCreateOpen, setAutoCreateOpen] = useState(false);
+  const [autoCreateLoading, setAutoCreateLoading] = useState(false);
+  const [autoCreateForm, setAutoCreateForm] = useState<AutoCreateTestPayload>({
+    title: "",
+    category: "",
+    duration: 60,
+    questionCount: 50,
+  });
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -118,6 +131,34 @@ export default function TestSeriesPage() {
     draft: tests.filter((t) => t.status === "draft").length,
   };
 
+  const submitAutoCreate = async () => {
+    setAutoCreateLoading(true);
+    try {
+      const payload: AutoCreateTestPayload = {
+        title: autoCreateForm.title.trim(),
+        category: autoCreateForm.category.trim(),
+        duration: Number(autoCreateForm.duration) || 0,
+        questionCount: Number(autoCreateForm.questionCount) || 0,
+      };
+
+      await testService.autoCreateTest(payload);
+      toast.success("Test auto-created successfully");
+      setAutoCreateOpen(false);
+      setAutoCreateForm((prev) => ({
+        ...prev,
+        title: "",
+        category: "",
+      }));
+      fetchTests();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to auto-create test";
+      toast.error("Failed to auto-create test", { description: message });
+    } finally {
+      setAutoCreateLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen p-6 bg-gray-50">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -128,14 +169,18 @@ export default function TestSeriesPage() {
               Manage all test series across packages
             </p>
           </div>
-          <Link href="/test-series/create">
-            <Button className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Create Test Series
+          <div className="flex items-center gap-2">
+            <Link href="/test-series/create">
+              <Button className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Create Test Series
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={() => setAutoCreateOpen(true)}>
+              Auto Create
             </Button>
-          </Link>
+          </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-4">
             <div className="text-sm text-gray-600">Total Tests</div>
@@ -154,7 +199,6 @@ export default function TestSeriesPage() {
             </div>
           </Card>
         </div>
-
         <Card className="p-4">
           <div className="flex items-center gap-4">
             <Input
@@ -176,7 +220,6 @@ export default function TestSeriesPage() {
             </Select>
           </div>
         </Card>
-
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -287,7 +330,6 @@ export default function TestSeriesPage() {
             ))}
           </div>
         )}
-
         {!loading && tests.length > 0 && (
           <Card className="p-4">
             <div className="flex items-center justify-between">
@@ -331,6 +373,123 @@ export default function TestSeriesPage() {
         confirmText="Delete"
         variant="warning"
       />
+
+      {autoCreateOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Auto Create Test
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Creates a test by randomly selecting questions based on
+                  filters.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Title
+                  </label>
+                  <Input
+                    value={autoCreateForm.title}
+                    onChange={(e) =>
+                      setAutoCreateForm((p) => ({
+                        ...p,
+                        title: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. JEE Mock Test 1"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Category
+                  </label>
+                  <Input
+                    value={autoCreateForm.category}
+                    onChange={(e) =>
+                      setAutoCreateForm((p) => ({
+                        ...p,
+                        category: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. JEE"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Question Count
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={autoCreateForm.questionCount}
+                    onChange={(e) =>
+                      setAutoCreateForm((p) => ({
+                        ...p,
+                        questionCount: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Duration (minutes)
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={autoCreateForm.duration}
+                    onChange={(e) =>
+                      setAutoCreateForm((p) => ({
+                        ...p,
+                        duration: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setAutoCreateOpen(false)}
+                disabled={autoCreateLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitAutoCreate}
+                disabled={
+                  autoCreateLoading ||
+                  !autoCreateForm.title.trim() ||
+                  !autoCreateForm.category.trim() ||
+                  Number(autoCreateForm.questionCount) <= 0 ||
+                  Number(autoCreateForm.duration) <= 0
+                }
+              >
+                {autoCreateLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </span>
+                ) : (
+                  "Auto Create"
+                )}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

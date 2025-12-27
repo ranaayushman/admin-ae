@@ -69,6 +69,29 @@ export interface TestsListResponse {
   pagination: Pagination;
 }
 
+export interface AutoCreateTestPayload {
+  title: string;
+  category: string;
+  duration: number;
+  questionCount: number;
+}
+
+export interface AutoCreateTestResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    _id: string;
+    title: string;
+    questions: string[];
+    totalMarks?: number;
+    duration: number;
+    category: string;
+    type: "mock" | "practice" | "previous_year";
+    status: TestStatus;
+    createdAt?: string;
+  };
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 };
@@ -262,6 +285,20 @@ export const testService = {
   deleteTest: async (id: string): Promise<void> => {
     try {
       await apiClient.delete(`/tests/${id}`);
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  },
+
+  autoCreateTest: async (
+    data: AutoCreateTestPayload
+  ): Promise<AutoCreateTestResponse["data"]> => {
+    try {
+      const response = await apiClient.post<AutoCreateTestResponse>(
+        "/tests/auto-create",
+        data
+      );
+      return response.data.data;
     } catch (error) {
       throw new Error(handleApiError(error));
     }

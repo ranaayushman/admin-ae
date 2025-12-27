@@ -10,4 +10,4 @@ export const footerLinkSchema = z.object({
   openInNewTab: z.boolean().default(false),
 });
 
-export type FooterLinkFormValues = z.infer<typeof footerLinkSchema>;
+export type FooterLinkFormValues = z.input<typeof footerLinkSchema>;

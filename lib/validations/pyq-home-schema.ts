@@ -24,5 +24,8 @@ export const pyqWithoutSolutionSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export type PyqWithSolutionFormValues = z.infer<typeof pyqWithSolutionSchema>;
-export type PyqWithoutSolutionFormValues = z.infer<typeof pyqWithoutSolutionSchema>;
+// react-hook-form works with input values; Zod defaults allow undefined input.
+export type PyqWithSolutionFormValues = z.input<typeof pyqWithSolutionSchema>;
+export type PyqWithoutSolutionFormValues = z.input<
+  typeof pyqWithoutSolutionSchema
+>;

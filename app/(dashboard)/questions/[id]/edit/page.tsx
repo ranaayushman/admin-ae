@@ -102,10 +102,7 @@ export default function QuestionEditPage() {
         solutionText: editData.solutionText,
         options: editData.options.map((opt) => opt.text),
         correctAnswer,
-        difficulty: editData.difficulty.toLowerCase() as
-          | "easy"
-          | "medium"
-          | "hard",
+        difficulty: editData.difficulty as "EASY" | "MEDIUM" | "HARD",
         metadata: { marks: editData.marks, year: question.metadata.year },
         chapter: editData.chapter,
         topic: editData.topic,

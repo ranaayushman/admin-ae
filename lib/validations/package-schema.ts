@@ -6,34 +6,37 @@ export const packageSchema = z.object({
   description: z.string().min(1, "Description is required"),
   bannerImage: z.string().optional(),
   category: z.string().min(1, "Category is required"),
-  
+
   // Pricing
   price: z.number().min(0, "Price must be positive"),
   discountPercentage: z.number().min(0).max(100).optional(),
   earlyBirdPrice: z.number().min(0).optional(),
-  
+
   // Validity
   validityPeriod: z.number().min(1, "Validity period is required"),
   validityUnit: z.enum(["DAYS", "MONTHS", "YEARS", "LIFETIME"]),
-  
+
   // Enrollment
   maxEnrollments: z.number().min(0).optional(),
   enableWaitlist: z.boolean().default(false),
-  
+
   // Access control
   accessStartDate: z.string().optional(),
   accessEndDate: z.string().optional(),
   enableSequentialUnlock: z.boolean().default(false),
-  
+
   // Tests
   testSeriesIds: z.array(z.string()).min(1, "At least one test is required"),
-  
+
   // Status
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
 });
 
-export type PackageFormValues = z.infer<typeof packageSchema>;
+// Note: react-hook-form works with *input* values; Zod defaults mean the input
+// can be undefined even if the parsed output is a boolean/number.
+// Using z.input keeps zodResolver() and useForm<T>() types aligned.
+export type PackageFormValues = z.input<typeof packageSchema>;
 
 // Manual enrollment schema
 export const manualEnrollmentSchema = z.object({
