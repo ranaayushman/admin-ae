@@ -301,14 +301,14 @@ export const getPackageById = async (id: string): Promise<PackageDetails> => {
 };
 
 /**
- * Update a package
+ * Update a package (PATCH)
  */
 export const updatePackage = async (
   id: string,
   payload: Partial<CreatePackagePayload>
 ): Promise<Package> => {
   try {
-    const response = await apiClient.put<{ success: boolean; data: Package }>(
+    const response = await apiClient.patch<{ success: boolean; data: Package }>(
       `/packages/${id}`,
       payload
     );
