@@ -1,7 +1,7 @@
 // components/add-pyq/QuestionMetaForm.tsx
 "use client";
 
-import { Control, FieldErrors, UseFormRegister } from "react-hook-form";
+import { Control, Controller, FieldErrors, UseFormRegister } from "react-hook-form";
 import { AddPyqFormValues } from "@/lib/validations/add-pyq-schema";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -21,30 +21,32 @@ interface QuestionMetaFormProps {
 
 export function QuestionMetaForm({
   register,
-  control, // eslint-disable-line @typescript-eslint/no-unused-vars
+  control,
   errors,
 }: QuestionMetaFormProps) {
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      {/* Subject */}
+      {/* Exam Category */}
       <div className="space-y-1.5">
-        <Label>Subject</Label>
-        <Select
-          onValueChange={(v) =>
-            control._formValues && (control._formValues.subject = v)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select subject" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="PHYSICS">Physics</SelectItem>
-            <SelectItem value="CHEMISTRY">Chemistry</SelectItem>
-            <SelectItem value="MATHEMATICS">Mathematics</SelectItem>
-            <SelectItem value="BIOLOGY">Biology</SelectItem>
-          </SelectContent>
-        </Select>
-        <input type="hidden" {...register("subject")} />
+        <Label>Exam Category</Label>
+        <Controller
+          name="subject"
+          control={control}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="neet">NEET</SelectItem>
+                <SelectItem value="jee-main">JEE Main</SelectItem>
+                <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
+                <SelectItem value="boards">Boards</SelectItem>
+                <SelectItem value="wbjee">WBJEE</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
         {errors.subject && (
           <p className="text-xs text-destructive">{errors.subject.message}</p>
         )}
@@ -66,21 +68,22 @@ export function QuestionMetaForm({
       {/* Difficulty */}
       <div className="space-y-1.5">
         <Label>Difficulty</Label>
-        <Select
-          onValueChange={(v) =>
-            control._formValues && (control._formValues.difficulty = v)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select difficulty" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="EASY">Easy</SelectItem>
-            <SelectItem value="MEDIUM">Medium</SelectItem>
-            <SelectItem value="HARD">Hard</SelectItem>
-          </SelectContent>
-        </Select>
-        <input type="hidden" {...register("difficulty")} />
+        <Controller
+          name="difficulty"
+          control={control}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select difficulty" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="easy">Easy</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="hard">Hard</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
         {errors.difficulty && (
           <p className="text-xs text-destructive">
             {errors.difficulty.message}

@@ -19,6 +19,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { OptionEditor } from "./OptionEditor";
 
 interface QuestionTypeSectionProps {
   control: Control<AddPyqFormValues>;
@@ -99,25 +100,36 @@ export function QuestionTypeSection({
             </Button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {fields.map((field, index) => (
-              <div key={field.id} className="flex items-center gap-2">
-                <Input
-                  {...register(`options.${index}.text` as const)}
-                  placeholder={`Option ${index + 1}`}
-                />
-                <div className="flex items-center space-x-1">
-                  <Checkbox
-                    checked={field.isCorrect}
-                    onCheckedChange={(checked) =>
-                      update(index, {
-                        ...field,
-                        isCorrect: Boolean(checked),
-                      })
-                    }
-                  />
-                  <span className="text-xs text-muted-foreground">Correct</span>
+              <div key={field.id} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-gray-600">
+                    Option {String.fromCharCode(65 + index)}
+                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={field.isCorrect}
+                      onCheckedChange={(checked) =>
+                        update(index, {
+                          ...field,
+                          isCorrect: Boolean(checked),
+                        })
+                      }
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      Correct Answer
+                    </span>
+                  </div>
                 </div>
+                <OptionEditor
+                  value={field.text}
+                  onChange={(value) => update(index, { ...field, text: value })}
+                  placeholder={`Enter option ${String.fromCharCode(
+                    65 + index
+                  )} text (supports math formulas)`}
+                  error={errors.options?.[index]?.text?.message}
+                />
               </div>
             ))}
           </div>

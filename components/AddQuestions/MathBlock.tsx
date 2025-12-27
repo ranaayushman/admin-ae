@@ -24,15 +24,22 @@ export const MathBlock = Node.create({
     return [
       {
         tag: 'div[data-type="math-block"]',
+        getAttrs: (element: HTMLElement) => ({
+          latex: element.getAttribute("data-latex") || "",
+        }),
       },
     ];
   },
 
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ node, HTMLAttributes }) {
+    // For atom nodes, we don't use content hole (0)
+    // Instead, render the latex as a data attribute
     return [
       "div",
-      mergeAttributes(HTMLAttributes, { "data-type": "math-block" }),
-      0,
+      mergeAttributes(HTMLAttributes, { 
+        "data-type": "math-block",
+        "data-latex": node.attrs.latex || "",
+      }),
     ];
   },
 

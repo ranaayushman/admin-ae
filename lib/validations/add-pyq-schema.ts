@@ -1,5 +1,6 @@
 // lib/validation/add-pyq-schema.ts
 import { z } from "zod";
+import { hasTextContent } from "@/lib/utils/htmlUtils";
 
 export const questionTypes = [
   "SINGLE_CORRECT",
@@ -25,12 +26,17 @@ export const addPyqSchema = z
   .object({
     subject: z.string().min(1, "Subject is required"),
     chapter: z.string().min(1, "Chapter is required"),
-    difficulty: z.enum(["EASY", "MEDIUM", "HARD"], {
+    difficulty: z.enum(["easy", "medium", "hard"], {
       message: "Difficulty is required",
     }),
 
-    question: z.string().min(1, "Question text is required"),
-    solution: z.string().min(1, "Solution is required"),
+    // Validate that there's actual text content or math blocks, not just empty HTML tags
+    question: z
+      .string()
+      .refine((val) => hasTextContent(val), "Question text is required"),
+    solution: z
+      .string()
+      .refine((val) => hasTextContent(val), "Solution is required"),
 
     questionType: z.enum(questionTypes, {
       message: "Question type is required",
@@ -41,7 +47,9 @@ export const addPyqSchema = z
       .array(
         z.object({
           id: z.string(),
-          text: z.string().min(1, "Option cannot be empty"),
+          text: z
+            .string()
+            .refine((val) => hasTextContent(val), "Option cannot be empty"),
           isCorrect: z.boolean(),
         })
       )

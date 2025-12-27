@@ -1,8 +1,7 @@
-// app/questions/page.tsx
 "use client";
 
-import React, { useState } from "react";
-import { Search, Edit, Trash2, Eye, Plus, Filter } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Edit, Trash2, Eye, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,100 +12,74 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-
-// Mock data - Replace with API
-const mockQuestions = [
-  {
-    id: "q_001",
-    subject: "Physics",
-    chapter: "Electrostatics",
-    difficulty: "Medium",
-    question: "Calculate the electric field at point P due to two charges...",
-    questionType: "SINGLE_CORRECT",
-    status: "active",
-    createdAt: "2024-12-10",
-    usedInTests: 3,
-  },
-  {
-    id: "q_002",
-    subject: "Chemistry",
-    chapter: "Atomic Structure",
-    difficulty: "Easy",
-    question: "What is the electronic configuration of Chromium?",
-    questionType: "SINGLE_CORRECT",
-    status: "active",
-    createdAt: "2024-12-11",
-    usedInTests: 2,
-  },
-  {
-    id: "q_003",
-    subject: "Mathematics",
-    chapter: "Calculus",
-    difficulty: "Hard",
-    question: "Integrate ∫ x² sin(x) dx",
-    questionType: "INTEGER",
-    status: "active",
-    createdAt: "2024-12-12",
-    usedInTests: 1,
-  },
-  {
-    id: "q_004",
-    subject: "Physics",
-    chapter: "Mechanics",
-    difficulty: "Medium",
-    question: "A block of mass 5kg is placed on an inclined plane...",
-    questionType: "NUMERICAL",
-    status: "draft",
-    createdAt: "2024-12-13",
-    usedInTests: 0,
-  },
-];
+import { questionService } from "@/lib/services/question.service";
+import { Question } from "@/lib/types";
+import { QuestionRenderer } from "@/components/QuestionRenderer";
 
 export default function QuestionsPage() {
+  // Direct state - no fancy hooks
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [subjectFilter, setSubjectFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     questionId: string | null;
   }>({ isOpen: false, questionId: null });
 
-  const itemsPerPage = 10;
+  // Simple fetch function
+  const fetchQuestions = async () => {
+    setLoading(true);
+    setError(null);
 
-  // Filter questions
-  const filteredQuestions = mockQuestions.filter((q) => {
-    const matchesSearch =
-      q.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.chapter.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = subjectFilter === "all" || q.subject === subjectFilter;
-    const matchesDifficulty =
-      difficultyFilter === "all" || q.difficulty === difficultyFilter;
-    const matchesStatus = statusFilter === "all" || q.status === statusFilter;
+    try {
+      const response = await questionService.getQuestions({
+        category:
+          categoryFilter !== "all" ? categoryFilter.toLowerCase() : undefined,
+        difficulty: difficultyFilter !== "all" ? difficultyFilter : undefined,
+        search: searchQuery || undefined,
+        page,
+        limit: 20,
+      });
 
-    return matchesSearch && matchesSubject && matchesDifficulty && matchesStatus;
-  });
+      console.log("✅ Questions loaded:", response);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage);
-  const paginatedQuestions = filteredQuestions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const handleDelete = (id: string) => {
-    setDeleteDialog({ isOpen: true, questionId: id });
+      setQuestions(response.data);
+      setTotal(response.pagination.total);
+      setTotalPages(response.pagination.totalPages);
+    } catch (err: any) {
+      console.error("❌ Failed to load questions:", err);
+      setError(err.message || "Failed to load questions");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const confirmDelete = () => {
-    console.log("Deleting question:", deleteDialog.questionId);
-    toast.success("Question deleted successfully");
-    setDeleteDialog({ isOpen: false, questionId: null });
+  // Fetch on mount and when filters change
+  useEffect(() => {
+    fetchQuestions();
+  }, [page, categoryFilter, difficultyFilter, searchQuery]);
+
+  const handleDelete = async () => {
+    if (!deleteDialog.questionId) return;
+
+    try {
+      await questionService.deleteQuestion(deleteDialog.questionId);
+      toast.success("Question deleted");
+      setDeleteDialog({ isOpen: false, questionId: null });
+      fetchQuestions();
+    } catch (err: any) {
+      toast.error("Failed to delete: " + err.message);
+    }
   };
 
   return (
@@ -120,41 +93,56 @@ export default function QuestionsPage() {
               Manage all questions in your question bank
             </p>
           </div>
-          <Link href="/pyq">
-            <Button className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Question
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={fetchQuestions}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh
             </Button>
-          </Link>
+            <Link href="/pyq">
+              <Button className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Question
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="p-4">
             <div className="text-sm text-gray-600">Total Questions</div>
-            <div className="text-2xl font-bold mt-1">{mockQuestions.length}</div>
+            <div className="text-2xl font-bold mt-1">{total}</div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600">Active</div>
+            <div className="text-sm text-gray-600">Loaded</div>
             <div className="text-2xl font-bold text-green-600 mt-1">
-              {mockQuestions.filter((q) => q.status === "active").length}
+              {questions.length}
             </div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600">Draft</div>
-            <div className="text-2xl font-bold text-yellow-600 mt-1">
-              {mockQuestions.filter((q) => q.status === "draft").length}
+            <div className="text-sm text-gray-600">Page</div>
+            <div className="text-2xl font-bold text-blue-600 mt-1">
+              {page} of {totalPages}
             </div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600">Reported</div>
-            <div className="text-2xl font-bold text-red-600 mt-1">0</div>
+            <div className="text-sm text-gray-600">Status</div>
+            <div className="text-2xl font-bold mt-1">
+              {loading ? "Loading..." : "Ready"}
+            </div>
           </Card>
         </div>
 
         {/* Filters */}
         <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -164,45 +152,47 @@ export default function QuestionsPage() {
                 className="pl-10"
               />
             </div>
-
-            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Subjects" />
+                <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Subjects</SelectItem>
-                <SelectItem value="Physics">Physics</SelectItem>
-                <SelectItem value="Chemistry">Chemistry</SelectItem>
-                <SelectItem value="Mathematics">Mathematics</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="neet">NEET</SelectItem>
+                <SelectItem value="jee-main">JEE Main</SelectItem>
+                <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
+                <SelectItem value="boards">Boards</SelectItem>
+                <SelectItem value="wbjee">WBJEE</SelectItem>
               </SelectContent>
             </Select>
-
-            <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+            <Select
+              value={difficultyFilter}
+              onValueChange={setDifficultyFilter}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="All Difficulties" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Difficulties</SelectItem>
-                <SelectItem value="Easy">Easy</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="Hard">Hard</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="easy">Easy</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="hard">Hard</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </Card>
 
-        {/* Questions Table */}
+        {/* Error */}
+        {error && (
+          <Card className="p-6 bg-red-50 border-red-200">
+            <p className="text-red-600 font-semibold">Error: {error}</p>
+            <Button onClick={fetchQuestions} className="mt-2">
+              Retry
+            </Button>
+          </Card>
+        )}
+
+        {/* Questions Table - ALWAYS SHOW */}
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -212,19 +202,13 @@ export default function QuestionsPage() {
                     Question
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Subject
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Chapter
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Difficulty
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Used In
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                     Actions
@@ -232,107 +216,127 @@ export default function QuestionsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {paginatedQuestions.map((question) => (
-                  <tr key={question.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="max-w-md">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {question.question}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {question.chapter}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
-                        {question.subject}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs rounded ${
-                          question.difficulty === "Easy"
-                            ? "bg-green-100 text-green-700"
-                            : question.difficulty === "Medium"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {question.difficulty}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {question.questionType}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={question.status as any} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {question.usedInTests} tests
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="sm" title="Preview">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Link href={`/questions/${question.id}/edit`}>
-                          <Button variant="ghost" size="sm" title="Edit">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(question.id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
+                      Loading questions...
                     </td>
                   </tr>
-                ))}
+                ) : questions.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
+                      No questions found
+                    </td>
+                  </tr>
+                ) : (
+                  questions.map((q) => (
+                    <tr key={q._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="max-w-md">
+                          <QuestionRenderer
+                            content={q.questionText}
+                            className="text-sm font-medium text-gray-900 line-clamp-2"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {q.topic}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
+                          {q.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {q.chapter}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 text-xs rounded ${
+                            q.difficulty === "EASY"
+                              ? "bg-green-100 text-green-700"
+                              : q.difficulty === "MEDIUM"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {q.difficulty}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/questions/${q._id}`}>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                          <Link href={`/questions/${q._id}/edit`}>
+                            <Button variant="ghost" size="sm">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setDeleteDialog({
+                                isOpen: true,
+                                questionId: q._id,
+                              })
+                            }
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t">
-            <div className="text-sm text-gray-600">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-              {Math.min(currentPage * itemsPerPage, filteredQuestions.length)} of{" "}
-              {filteredQuestions.length} questions
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t">
+              <p className="text-sm text-gray-600">
+                Page {page} of {totalPages} ({total} total)
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          )}
         </Card>
       </div>
 
-      {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, questionId: null })}
-        onConfirm={confirmDelete}
+        onConfirm={handleDelete}
         title="Delete Question"
-        description="Are you sure you want to delete this question? This action cannot be undone."
+        description="Are you sure? This cannot be undone."
         confirmText="Delete"
         variant="danger"
       />

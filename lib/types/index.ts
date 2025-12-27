@@ -54,3 +54,74 @@ export interface ApiError {
   };
   timestamp: string;
 }
+
+// Question Bank Types
+export interface QuestionOption {
+  text: string;
+  isCorrect?: boolean;
+}
+
+export interface QuestionMetadata {
+  marks: number;
+  year?: number;
+}
+
+export interface Question {
+  _id: string;
+  category: string;
+  chapter: string;
+  topic: string;
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  solutionText: string;
+  questionImageBase64?: string | null;
+  solutionImageBase64?: string | null;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  metadata: QuestionMetadata;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateQuestionPayload {
+  category: string;
+  chapter: string;
+  topic: string;
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  solutionText: string;
+  questionImageBase64?: string | null;
+  solutionImageBase64?: string | null;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  metadata: QuestionMetadata;
+}
+
+export interface CreateQuestionResponse {
+  success: boolean;
+  message: string;
+  data: Question;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface QuestionsListResponse {
+  success: boolean;
+  data: Question[];
+  pagination: PaginationMeta;
+}
+
+export interface QuestionFilters {
+  category?: string;
+  chapter?: string;
+  topic?: string;
+  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+  search?: string;
+  page?: number;
+  limit?: number;
+}

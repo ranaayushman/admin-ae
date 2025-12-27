@@ -17,6 +17,8 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Input } from "../ui/input";
+import { questionService } from "@/lib/services/question.service";
+import { CreateQuestionPayload } from "@/lib/types";
 
 export function AddPyqForm() {
   const [questionType, setQuestionType] =
@@ -44,59 +46,100 @@ export function AddPyqForm() {
         { id: crypto.randomUUID(), text: "", isCorrect: false },
       ],
     },
+    mode: "onBlur", // Validate on blur for better UX
   });
 
   const questionValue = watch("question");
   const solutionValue = watch("solution");
 
-  const onSubmit = (data: AddPyqFormValues) => {
-    // Build payload – including attachments
-    const payload = {
-      ...data,
-      questionImages: Array.from(
-        (document.getElementById("questionImages") as HTMLInputElement)
-          ?.files || []
-      ).map((f) => ({
-        name: f.name,
-        size: f.size,
-        type: f.type,
-      })),
-      solutionImages: Array.from(
-        (document.getElementById("solutionImages") as HTMLInputElement)
-          ?.files || []
-      ).map((f) => ({
-        name: f.name,
-        size: f.size,
-        type: f.type,
-      })),
-    };
+  const onSubmit = async (data: AddPyqFormValues) => {
+    try {
+      // Map form data to API payload format
+      let correctAnswer = "";
+      let optionsArray: string[] = [];
 
-    console.log("Saved Question:", payload);
+      if (data.questionType === "SINGLE_CORRECT" || data.questionType === "MULTI_CORRECT") {
+        // For MCQ questions
+        optionsArray = data.options?.map((opt) => opt.text) || [];
+        
+        if (data.questionType === "SINGLE_CORRECT") {
+          // Find the index of the correct option (A, B, C, D...)
+          const correctIndex = data.options?.findIndex((opt) => opt.isCorrect);
+          correctAnswer = correctIndex !== undefined && correctIndex !== -1 
+            ? String.fromCharCode(65 + correctIndex) // 65 is 'A'
+            : "A";
+        } else {
+          // For multi-correct, send comma-separated indices
+          const correctIndices = data.options
+            ?.map((opt, idx) => (opt.isCorrect ? String.fromCharCode(65 + idx) : null))
+            .filter((v) => v !== null);
+          correctAnswer = correctIndices?.join(",") || "A";
+        }
+      } else if (data.questionType === "INTEGER") {
+        correctAnswer = data.integerAnswer || "0";
+        optionsArray = [];
+      } else if (data.questionType === "NUMERICAL") {
+        correctAnswer = data.numericalAnswer || "0";
+        optionsArray = [];
+      }
 
-    toast.success("Question saved to local question bank", {
-      description: "Data logged to console. Wire API when ready.",
-      position: "bottom-center",
-    });
+      const payload: CreateQuestionPayload = {
+        category: data.subject, // Form now sends correct lowercase values
+        chapter: data.chapter,
+        topic: data.chapter, // Using chapter as topic for now
+        questionText: data.question,
+        options: optionsArray,
+        correctAnswer,
+        solutionText: data.solution,
+        questionImageBase64: null, // TODO: Handle image uploads
+        solutionImageBase64: null, // TODO: Handle image uploads
+        difficulty: data.difficulty as any, // Form now sends lowercase
+        metadata: {
+          marks: 4, // Default marks, can be made configurable
+          year: new Date().getFullYear(),
+        },
+      };
 
-    reset({
-      subject: "",
-      chapter: "",
-      difficulty: undefined,
-      question: "",
-      solution: "",
-      questionType,
-      options:
-        questionType === "SINGLE_CORRECT" || questionType === "MULTI_CORRECT"
-          ? [
-              { id: crypto.randomUUID(), text: "", isCorrect: false },
-              { id: crypto.randomUUID(), text: "", isCorrect: false },
-            ]
-          : [],
-      integerAnswer: "",
-      numericalAnswer: "",
-      tolerance: "",
-      roundingMode: undefined,
-    });
+      console.log("📤 Sending question to API:", payload);
+
+      // Call the API
+      const createdQuestion = await questionService.createQuestion(payload);
+
+      console.log("✅ Question created successfully:", createdQuestion);
+
+      toast.success("Question saved to question bank successfully!", {
+        description: `Question ID: ${createdQuestion._id}`,
+        position: "bottom-center",
+      });
+
+      // Reset form after successful submission
+      reset({
+        subject: "",
+        chapter: "",
+        difficulty: undefined,
+        question: "",
+        solution: "",
+        questionType,
+        options:
+          questionType === "SINGLE_CORRECT" || questionType === "MULTI_CORRECT"
+            ? [
+                { id: crypto.randomUUID(), text: "", isCorrect: false },
+                { id: crypto.randomUUID(), text: "", isCorrect: false },
+              ]
+            : [],
+        integerAnswer: "",
+        numericalAnswer: "",
+        tolerance: "",
+        roundingMode: undefined,
+      });
+    } catch (error: any) {
+      console.error("❌ Error creating question:", error);
+      
+      toast.error("Failed to save question", {
+        description: error?.message || "Please try again or check the console for details.",
+        position: "bottom-center",
+      });
+    }
   };
 
   const onError = () => {

@@ -1,7 +1,7 @@
 // components/editor/TiptapEditor.tsx
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -16,7 +16,7 @@ interface TiptapEditorProps {
   id: string;
   label: string;
   description?: string;
-  value?: string; // stringified JSON from TipTap
+  value?: string;
   onChange?: (value: string) => void;
   error?: string;
 }
@@ -29,6 +29,8 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
   onChange,
   error,
 }) => {
+  const isInternalChange = useRef(false);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -44,10 +46,14 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
       }),
       MathBlock,
     ],
-    content: value ? safeParseJSON(value) : undefined,
-    onUpdate: ({ editor }) => {
-      const json = editor.getJSON();
-      onChange?.(JSON.stringify(json));
+    content: "",
+    onUpdate: ({ editor: ed }) => {
+      isInternalChange.current = true;
+      const html = ed.getHTML();
+      onChange?.(html);
+      setTimeout(() => {
+        isInternalChange.current = false;
+      }, 0);
     },
     editorProps: {
       attributes: {
@@ -59,10 +65,11 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
 
   useEffect(() => {
     if (!editor) return;
-    if (!value) return;
-    const parsed = safeParseJSON(value);
-    if (parsed) {
-      editor.commands.setContent(parsed);
+    if (isInternalChange.current) return;
+    
+    const currentContent = editor.getHTML();
+    if (value !== currentContent && value !== undefined) {
+      editor.commands.setContent(value);
     }
   }, [value, editor]);
 
@@ -111,7 +118,6 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
         <p className="text-xs text-muted-foreground">{description}</p>
       )}
 
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/50 px-2 py-1">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -147,7 +153,6 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
         </ToolbarButton>
       </div>
 
-      {/* Editor box */}
       <div
         id={id}
         className={cn(
@@ -162,15 +167,6 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
     </div>
   );
 };
-
-function safeParseJSON(raw: string | undefined) {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
 
 function ToolbarButton({
   active,
