@@ -47,7 +47,43 @@ Successfully integrated the backend API for test creation and removed all hardco
 
 ## API Integration Details
 
-### Request Payload Format
+### GET /tests - Test Listing
+
+```typescript
+Request:
+GET /tests?status=published&page=1&limit=10&search=mock
+
+Response:
+{
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "title": "JEE Main Mock Test 1",
+      "description": "Comprehensive test...",
+      "category": "jee-mains",
+      "questions": ["id1", "id2", "id3"],
+      "duration": 180,
+      "marksPerQuestion": 4,
+      "totalMarks": 300,
+      "negativeMarking": -1,
+      "status": "published",
+      "type": "mock",
+      "shuffleQuestions": true,
+      "createdBy": "admin_id",
+      "createdAt": "2025-12-27T10:00:00Z",
+      "updatedAt": "2025-12-27T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 10
+  }
+}
+```
+
+### POST /tests - Test Creation
 
 ```typescript
 {
@@ -96,6 +132,20 @@ Successfully integrated the backend API for test creation and removed all hardco
 
 ## Features Implemented
 
+### Test Listing Page
+
+- [x] Fetch tests from GET /tests API
+- [x] Pagination (Previous/Next buttons)
+- [x] Filter by status (published/draft)
+- [x] Real-time search with 500ms debounce
+- [x] Loading states
+- [x] Empty state handling
+- [x] Stats dashboard (total, published, drafts)
+- [x] Delete test with confirmation
+- [x] Duplicate test functionality
+- [x] Display test details (questions count, duration, marks, type)
+- [x] Navigation to analytics and edit pages
+
 ### Question Selection
 
 - [x] Fetch questions from API
@@ -128,7 +178,20 @@ Successfully integrated the backend API for test creation and removed all hardco
 
 ## Testing Checklist
 
-- [ ] Create test with multiple questions
+### Test Listing
+
+- [ ] Verify tests load from API on page mount
+- [ ] Test pagination (navigate between pages)
+- [ ] Test status filter (all, published, draft)
+- [ ] Test search functionality with debounce
+- [ ] Verify delete test with confirmation
+- [ ] Test duplicate test functionality
+- [ ] Check stats calculation
+- [ ] Verify empty state display
+- [ ] Test loading states
+
+### Test Creation
+
 - [ ] Verify payload sent to backend matches API spec
 - [ ] Test error handling (network failure, validation errors)
 - [ ] Verify question selector filters work
@@ -139,8 +202,11 @@ Successfully integrated the backend API for test creation and removed all hardco
 
 ## Next Steps
 
-1. Test the integration with the backend API
-2. Add test editing functionality (similar to question editing)
+1. Test the integration with the backend API - API integration)
+
+- ✅ `app/(dashboard)/test-series/create/page.tsx` (REWRITTEN - API integration)
+- ✅ `app/(dashboard)/test-series/page.tsx` (REWRITTEN - Removed mock data, API integration) ⭐g)
+
 3. Add bulk question import
 4. Implement test preview before creation
 5. Add test duplication feature

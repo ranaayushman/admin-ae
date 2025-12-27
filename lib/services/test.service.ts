@@ -1,24 +1,27 @@
 import apiClient, { handleApiError } from "./api.client";
 
-/**
- * Test Service
- *
- * Handles test series related API calls
- */
+export type TestStatus = "draft" | "published";
 
 export interface CreateTestPayload {
   title: string;
   description: string;
   category: string;
-  questions: string[]; // Array of question IDs
-  duration: number; // in minutes
+  questions: string[];
+  duration: number;
   marksPerQuestion: number;
   negativeMarking: number;
-  status: "draft" | "published";
+  status: TestStatus;
   type: "mock" | "practice" | "previous_year";
   shuffleQuestions: boolean;
-  startDate?: string; // ISO date string
-  endDate?: string; // ISO date string
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export interface Test {
@@ -31,7 +34,7 @@ export interface Test {
   marksPerQuestion: number;
   totalMarks: number;
   negativeMarking: number;
-  status: "draft" | "published";
+  status: TestStatus;
   type: "mock" | "practice" | "previous_year";
   shuffleQuestions: boolean;
   startDate?: string;
@@ -43,44 +46,128 @@ export interface Test {
 
 export interface CreateTestResponse {
   success: boolean;
-  message: string;
+  message?: string;
   data: Test;
 }
 
-export interface TestsListResponse {
-  success: boolean;
-  data: Test[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+// List endpoint often returns a lighter payload (e.g. totalQuestions instead of questions[])
+export interface TestListItem {
+  _id: string;
+  title: string;
+  category: string;
+  duration: number;
+  status: TestStatus;
+  description?: string;
+  type?: string;
+  totalMarks?: number;
+  totalQuestions?: number;
+  questions?: string[];
 }
 
+export interface TestsListResponse {
+  data: TestListItem[];
+  pagination: Pagination;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const normalizeStatus = (status: unknown): TestStatus => {
+  const s = String(status ?? "").toLowerCase();
+  return s === "published" ? "published" : "draft";
+};
+
+const normalizeListItem = (item: Record<string, unknown>): TestListItem => {
+  const idRaw = item["_id"] ?? item["id"];
+  const questionsRaw = item["questions"];
+
+  const questions = Array.isArray(questionsRaw)
+    ? questionsRaw.filter((q): q is string => typeof q === "string")
+    : undefined;
+
+  return {
+    _id: typeof idRaw === "string" ? idRaw : String(idRaw ?? ""),
+    title: typeof item["title"] === "string" ? item["title"] : "",
+    category:
+      typeof item["category"] === "string"
+        ? item["category"]
+        : typeof item["examType"] === "string"
+        ? item["examType"]
+        : "",
+    duration: Number(item["duration"] ?? 0),
+    status: normalizeStatus(item["status"]),
+    description:
+      typeof item["description"] === "string" ? item["description"] : undefined,
+    type:
+      typeof item["type"] === "string"
+        ? item["type"]
+        : typeof item["testType"] === "string"
+        ? item["testType"]
+        : undefined,
+    totalMarks:
+      typeof item["totalMarks"] === "number"
+        ? item["totalMarks"]
+        : typeof item["totalMarks"] === "string"
+        ? Number(item["totalMarks"])
+        : undefined,
+    totalQuestions:
+      typeof item["totalQuestions"] === "number"
+        ? item["totalQuestions"]
+        : typeof item["totalQuestions"] === "string"
+        ? Number(item["totalQuestions"])
+        : undefined,
+    questions,
+  };
+};
+
+const pickCandidates = (raw: unknown): Record<string, unknown>[] => {
+  if (!isRecord(raw)) return [];
+  const candidates: Record<string, unknown>[] = [raw];
+  const dataVal = raw["data"];
+  if (isRecord(dataVal)) {
+    candidates.push(dataVal);
+    const nested = dataVal["data"];
+    if (isRecord(nested)) candidates.push(nested);
+  }
+  return candidates;
+};
+
+const extractTestsArray = (raw: unknown): unknown[] => {
+  if (Array.isArray(raw)) return raw;
+  for (const candidate of pickCandidates(raw)) {
+    const testsVal = candidate["tests"];
+    if (Array.isArray(testsVal)) return testsVal;
+    const dataVal = candidate["data"];
+    if (Array.isArray(dataVal)) return dataVal;
+    if (isRecord(dataVal) && Array.isArray(dataVal["data"]))
+      return dataVal["data"] as unknown[];
+  }
+  return [];
+};
+
+const extractPagination = (raw: unknown): Record<string, unknown> => {
+  for (const candidate of pickCandidates(raw)) {
+    const p = candidate["pagination"];
+    if (isRecord(p)) return p;
+  }
+  return {};
+};
+
 export const testService = {
-  /**
-   * Create a new test
-   * POST /tests
-   */
   createTest: async (data: CreateTestPayload): Promise<Test> => {
     try {
       const response = await apiClient.post<CreateTestResponse>("/tests", data);
-
-      console.log("✅ Test created successfully:", response.data.message);
-
       return response.data.data;
     } catch (error) {
-      console.error("❌ Error creating test:", error);
       throw new Error(handleApiError(error));
     }
   },
 
-  /**
-   * Get all tests with filters
-   * GET /tests
-   */
   getTests: async (filters?: {
+    examType?: string;
+    testType?: string;
+    difficulty?: string;
     category?: string;
     status?: string;
     type?: string;
@@ -91,48 +178,72 @@ export const testService = {
     try {
       const params = new URLSearchParams();
 
+      if (filters?.examType) params.append("examType", filters.examType);
+      if (filters?.testType) params.append("testType", filters.testType);
+      if (filters?.difficulty) params.append("difficulty", filters.difficulty);
       if (filters?.category) params.append("category", filters.category);
       if (filters?.status) params.append("status", filters.status);
       if (filters?.type) params.append("type", filters.type);
       if (filters?.search) params.append("search", filters.search);
-      if (filters?.page) params.append("page", filters.page.toString());
-      if (filters?.limit) params.append("limit", filters.limit.toString());
+      if (filters?.page) params.append("page", String(filters.page));
+      if (filters?.limit) params.append("limit", String(filters.limit));
 
       const queryString = params.toString();
       const url = queryString ? `/tests?${queryString}` : "/tests";
 
-      const response = await apiClient.get<TestsListResponse>(url);
+      const response = await apiClient.get<unknown>(url);
+      const raw = response.data;
 
-      console.log("✅ Tests fetched successfully");
+      const testsArray = extractTestsArray(raw);
+      const paginationObj = extractPagination(raw);
 
-      return response.data;
+      const items = testsArray.filter(isRecord).map(normalizeListItem);
+
+      const page = Number(
+        paginationObj["page"] ??
+          paginationObj["currentPage"] ??
+          filters?.page ??
+          1
+      );
+      const limit = Number(paginationObj["limit"] ?? filters?.limit ?? 10);
+      const total = Number(
+        paginationObj["total"] ??
+          paginationObj["totalTests"] ??
+          paginationObj["count"] ??
+          items.length
+      );
+      const totalPages = Number(
+        paginationObj["totalPages"] ??
+          (total && limit ? Math.ceil(total / limit) : 1)
+      );
+
+      return {
+        data: items,
+        pagination: {
+          total: Number.isFinite(total) ? total : items.length,
+          page: Number.isFinite(page) ? page : 1,
+          limit: Number.isFinite(limit) ? limit : 10,
+          totalPages: Number.isFinite(totalPages) ? totalPages : 1,
+        },
+      };
     } catch (error) {
-      console.error("❌ Error fetching tests:", error);
       throw new Error(handleApiError(error));
     }
   },
 
-  /**
-   * Get test by ID
-   * GET /tests/:id
-   */
   getTestById: async (id: string): Promise<Test> => {
     try {
-      const response = await apiClient.get(`/tests/${id}`);
-
-      console.log("✅ Test fetched successfully");
-
-      return response.data.data || response.data;
+      const response = await apiClient.get<unknown>(`/tests/${id}`);
+      const raw = response.data;
+      if (isRecord(raw) && isRecord(raw["data"])) {
+        return raw["data"] as unknown as Test;
+      }
+      return raw as unknown as Test;
     } catch (error) {
-      console.error("❌ Error fetching test:", error);
       throw new Error(handleApiError(error));
     }
   },
 
-  /**
-   * Update test
-   * PATCH /tests/:id
-   */
   updateTest: async (
     id: string,
     data: Partial<CreateTestPayload>
@@ -142,27 +253,16 @@ export const testService = {
         `/tests/${id}`,
         data
       );
-
-      console.log("✅ Test updated successfully");
-
       return response.data.data;
     } catch (error) {
-      console.error("❌ Error updating test:", error);
       throw new Error(handleApiError(error));
     }
   },
 
-  /**
-   * Delete test
-   * DELETE /tests/:id
-   */
   deleteTest: async (id: string): Promise<void> => {
     try {
       await apiClient.delete(`/tests/${id}`);
-
-      console.log("✅ Test deleted successfully");
     } catch (error) {
-      console.error("❌ Error deleting test:", error);
       throw new Error(handleApiError(error));
     }
   },
