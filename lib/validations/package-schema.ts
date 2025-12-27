@@ -25,12 +25,19 @@ export const packageSchema = z.object({
   accessEndDate: z.string().optional(),
   enableSequentialUnlock: z.boolean().default(false),
 
-  // Tests
-  testSeriesIds: z.array(z.string()).min(1, "At least one test is required"),
+  // Tests - now optional since tests can be added later
+  testSeriesIds: z.array(z.string()).optional().default([]),
 
   // Status
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
+
+  // Additional fields for API compatibility
+  features: z.array(z.string()).optional().default([]),
+  subjects: z.array(z.string()).optional().default([]),
+  examTypes: z.array(z.string()).optional().default([]),
+  launchDate: z.string().optional(),
+  expiryDate: z.string().optional(),
 });
 
 // Note: react-hook-form works with *input* values; Zod defaults mean the input

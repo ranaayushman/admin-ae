@@ -1,88 +1,126 @@
 // app/packages/page.tsx
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Edit, Trash2, Users, TrendingUp, Calendar } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Users,
+  TrendingUp,
+  Search,
+  Filter,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
-
-// Mock packages
-const mockPackages = [
-  {
-    id: "pkg_001",
-    name: "JEE Main 2025 Complete Package",
-    description: "Complete test series with 50 mock tests",
-    price: 2999,
-    testsCount: 50,
-    enrollments: 245,
-    maxEnrollments: 500,
-    status: "active",
-    validityPeriod: "12 months",
-    revenue: 734755,
-  },
-  {
-    id: "pkg_002",
-    name: "NEET 2025 Crash Course",
-    description: "30-day crash course with 25 tests",
-    price: 1999,
-    testsCount: 25,
-    enrollments: 189,
-    maxEnrollments: 300,
-    status: "active",
-    validityPeriod: "6 months",
-    revenue: 377811,
-  },
-  {
-    id: "pkg_003",
-    name: "12th Board Practice Package",
-    description: "Comprehensive board exam preparation",
-    price: 999,
-    testsCount: 15,
-    enrollments: 67,
-    maxEnrollments: 0,
-    status: "active",
-    validityPeriod: "3 months",
-    revenue: 66933,
-  },
-  {
-    id: "pkg_004",
-    name: "JEE Advanced 2026 Early Bird",
-    description: "Get ahead with advanced preparation",
-    price: 3999,
-    testsCount: 40,
-    enrollments: 12,
-    maxEnrollments: 100,
-    status: "scheduled",
-    validityPeriod: "18 months",
-    revenue: 47988,
-  },
-];
+import { usePackageStore } from "@/lib/stores/packageStore";
+import { PackageFilters } from "@/lib/services/package.service";
 
 export default function PackagesPage() {
+  const {
+    packages,
+    loading,
+    error,
+    pagination,
+    stats,
+    fetchPackages,
+    deletePackage: deletePackageAction,
+    invalidateCache,
+  } = usePackageStore();
+
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     packageId: string | null;
-  }>({ isOpen: false, packageId: null });
+    packageTitle: string;
+  }>({ isOpen: false, packageId: null, packageTitle: "" });
 
-  const handleDelete = (id: string) => {
-    setDeleteDialog({ isOpen: true, packageId: id });
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  // Fetch packages on mount
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
+
+  // Handle search with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const filters: PackageFilters = {
+        page: 1,
+        limit: 10,
+      };
+
+      if (searchQuery.trim()) {
+        filters.search = searchQuery.trim();
+      }
+      if (statusFilter !== "all") {
+        filters.status = statusFilter as PackageFilters["status"];
+      }
+      if (typeFilter !== "all") {
+        filters.type = typeFilter as PackageFilters["type"];
+      }
+
+      fetchPackages(filters, true);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, statusFilter, typeFilter, fetchPackages]);
+
+  const handleDelete = (id: string, title: string) => {
+    setDeleteDialog({ isOpen: true, packageId: id, packageTitle: title });
   };
 
-  const confirmDelete = () => {
-    console.log("Deleting package:", deleteDialog.packageId);
-    toast.success("Package archived successfully");
-    setDeleteDialog({ isOpen: false, packageId: null });
+  const confirmDelete = async () => {
+    if (!deleteDialog.packageId) return;
+
+    setIsDeleting(true);
+    try {
+      await deletePackageAction(deleteDialog.packageId);
+      toast.success("Package deleted successfully");
+      setDeleteDialog({ isOpen: false, packageId: null, packageTitle: "" });
+    } catch (err) {
+      toast.error("Failed to delete package", {
+        description: err instanceof Error ? err.message : "Please try again",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
-  const totalRevenue = mockPackages.reduce((sum, pkg) => sum + pkg.revenue, 0);
-  const totalEnrollments = mockPackages.reduce(
-    (sum, pkg) => sum + pkg.enrollments,
-    0
-  );
+  const handleRefresh = () => {
+    invalidateCache();
+    fetchPackages(undefined, true);
+  };
+
+  // Format validity days to readable format
+  const formatValidity = (days: number): string => {
+    if (days >= 365) {
+      const years = Math.floor(days / 365);
+      return `${years} year${years > 1 ? "s" : ""}`;
+    } else if (days >= 30) {
+      const months = Math.floor(days / 30);
+      return `${months} month${months > 1 ? "s" : ""}`;
+    }
+    return `${days} days`;
+  };
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
@@ -91,16 +129,26 @@ export default function PackagesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Packages</h1>
-            <p className="text-gray-500 mt-1">
-              Manage test series packages
-            </p>
+            <p className="text-gray-500 mt-1">Manage test series packages</p>
           </div>
-          <Link href="/packages/create">
-            <Button className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Create Package
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              />
             </Button>
-          </Link>
+            <Link href="/packages/create">
+              <Button className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Create Package
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -112,7 +160,13 @@ export default function PackagesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockPackages.length}</div>
+              <div className="text-2xl font-bold">
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  stats.totalPackages
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -124,7 +178,11 @@ export default function PackagesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {totalEnrollments}
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  stats.totalEnrollments.toLocaleString()
+                )}
               </div>
             </CardContent>
           </Card>
@@ -137,7 +195,11 @@ export default function PackagesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                ₹{totalRevenue.toLocaleString()}
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  `₹${stats.totalRevenue.toLocaleString()}`
+                )}
               </div>
             </CardContent>
           </Card>
@@ -150,119 +212,256 @@ export default function PackagesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {mockPackages.filter((p) => p.status === "active").length}
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  stats.activePackages
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search packages..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="test-series">Test Series</SelectItem>
+                  <SelectItem value="course">Course</SelectItem>
+                  <SelectItem value="bundle">Bundle</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Error State */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <p className="text-red-600">{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={handleRefresh}
+              >
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {loading && packages.length === 0 && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading packages...</span>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && packages.length === 0 && (
+          <Card>
+            <CardContent className="pt-6 text-center py-12">
+              <p className="text-gray-500 mb-4">No packages found</p>
+              <Link href="/packages/create">
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Package
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Packages Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockPackages.map((pkg) => (
-            <Card key={pkg.id} className="hover:shadow-lg transition">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {pkg.description}
-                    </p>
-                  </div>
-                  <StatusBadge status={pkg.status as any} />
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs text-gray-500">Tests</div>
-                    <div className="text-lg font-semibold">
-                      {pkg.testsCount}
+        {packages.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {packages.map((pkg) => (
+              <Card key={pkg._id} className="hover:shadow-lg transition">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{pkg.title}</CardTitle>
+                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                        {pkg.description}
+                      </p>
                     </div>
+                    <StatusBadge
+                      status={
+                        pkg.status as
+                          | "active"
+                          | "inactive"
+                          | "draft"
+                          | "scheduled"
+                      }
+                    />
                   </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Validity</div>
-                    <div className="text-lg font-semibold">
-                      {pkg.validityPeriod}
-                    </div>
-                  </div>
-                </div>
+                </CardHeader>
 
-                {/* Enrollment Progress */}
-                <div>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-600">Enrollments</span>
-                    <span className="font-medium">
-                      {pkg.enrollments}
-                      {pkg.maxEnrollments > 0 && ` / ${pkg.maxEnrollments}`}
-                    </span>
-                  </div>
-                  {pkg.maxEnrollments > 0 && (
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{
-                          width: `${(pkg.enrollments / pkg.maxEnrollments) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Metrics */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-green-600" />
+                <CardContent className="space-y-4">
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-xs text-gray-500">Revenue</div>
-                      <div className="text-sm font-semibold text-green-600">
-                        ₹{pkg.revenue.toLocaleString()}
+                      <div className="text-xs text-gray-500">Tests</div>
+                      <div className="text-lg font-semibold">
+                        {pkg.totalTests}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Validity</div>
+                      <div className="text-lg font-semibold">
+                        {formatValidity(pkg.validityDays)}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-blue-600" />
-                    <div>
-                      <div className="text-xs text-gray-500">Price</div>
-                      <div className="text-sm font-semibold">
-                        ₹{pkg.price.toLocaleString()}
+
+                  {/* Enrollment Progress */}
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-600">Enrollments</span>
+                      <span className="font-medium">
+                        {pkg.enrollments}
+                        {pkg.maxEnrollments && pkg.maxEnrollments > 0
+                          ? ` / ${pkg.maxEnrollments}`
+                          : ""}
+                      </span>
+                    </div>
+                    {pkg.maxEnrollments && pkg.maxEnrollments > 0 && (
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{
+                            width: `${Math.min(
+                              (pkg.enrollments / pkg.maxEnrollments) * 100,
+                              100
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Metrics */}
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                      <div>
+                        <div className="text-xs text-gray-500">Revenue</div>
+                        <div className="text-sm font-semibold text-green-600">
+                          ₹{(pkg.revenue ?? 0).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-blue-600" />
+                      <div>
+                        <div className="text-xs text-gray-500">Price</div>
+                        <div className="text-sm font-semibold">
+                          {pkg.discountPrice ? (
+                            <span>
+                              <span className="line-through text-gray-400 mr-1">
+                                ₹{(pkg.price ?? 0).toLocaleString()}
+                              </span>
+                              ₹{(pkg.discountPrice ?? 0).toLocaleString()}
+                            </span>
+                          ) : (
+                            `₹${(pkg.price ?? 0).toLocaleString()}`
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-4">
-                  <Link href={`/packages/${pkg.id}/edit`} className="flex-1">
-                    <Button variant="outline" className="w-full flex items-center gap-2">
-                      <Edit className="w-4 h-4" />
-                      Edit
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-4">
+                    <Link href={`/packages/${pkg._id}/edit`} className="flex-1">
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center gap-2"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Edit
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleDelete(pkg._id, pkg.title)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDelete(pkg.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              disabled={pagination.page === 1 || loading}
+              onClick={() => fetchPackages({ page: pagination.page - 1 }, true)}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-gray-600">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              disabled={pagination.page === pagination.totalPages || loading}
+              onClick={() => fetchPackages({ page: pagination.page + 1 }, true)}
+            >
+              Next
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
-        onClose={() => setDeleteDialog({ isOpen: false, packageId: null })}
+        onClose={() =>
+          setDeleteDialog({ isOpen: false, packageId: null, packageTitle: "" })
+        }
         onConfirm={confirmDelete}
-        title="Archive Package"
-        description="Are you sure you want to archive this package? Students with active enrollments will retain access."
-        confirmText="Archive"
-        variant="warning"
+        title="Delete Package"
+        description={`Are you sure you want to delete "${deleteDialog.packageTitle}"? This action cannot be undone.`}
+        confirmText={isDeleting ? "Deleting..." : "Delete"}
+        variant="danger"
       />
     </div>
   );

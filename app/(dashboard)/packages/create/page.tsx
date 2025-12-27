@@ -1,13 +1,19 @@
 // app/packages/create/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import {
   packageSchema,
   PackageFormValues,
 } from "@/lib/validations/package-schema";
+import {
+  createPackage,
+  mapFormToApiPayload,
+} from "@/lib/services/package.service";
+import { testService, TestListItem } from "@/lib/services/test.service";
 import {
   Card,
   CardContent,
@@ -26,24 +32,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { ImageUploadWithPreview } from "@/components/ui/ImageUploadWithPreview";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-// Mock available tests
-const mockAvailableTests = [
-  { id: "test_001", name: "JEE Main Mock Test 1", questionsCount: 75 },
-  { id: "test_002", name: "JEE Main Mock Test 2", questionsCount: 75 },
-  { id: "test_003", name: "Physics Chapter Test", questionsCount: 30 },
-  { id: "test_004", name: "Chemistry Full Test", questionsCount: 45 },
-  { id: "test_005", name: "Mathematics Advanced", questionsCount: 60 },
-];
+// Subject options by category
+const subjectsByCategory: Record<string, string[]> = {
+  JEE_MAIN: ["Physics", "Chemistry", "Mathematics"],
+  JEE_ADVANCED: ["Physics", "Chemistry", "Mathematics"],
+  NEET: ["Physics", "Chemistry", "Biology"],
+  BOARD_10: ["Science", "Mathematics", "Social Science", "English"],
+  BOARD_12: ["Physics", "Chemistry", "Mathematics", "Biology"],
+  WBJEE: ["Physics", "Chemistry", "Mathematics"],
+};
 
 export default function CreatePackagePage() {
+  const router = useRouter();
   const [bannerImage, setBannerImage] = useState("");
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [showTestSelector, setShowTestSelector] = useState(false);
+  const [availableTests, setAvailableTests] = useState<TestListItem[]>([]);
+  const [isLoadingTests, setIsLoadingTests] = useState(false);
+  const [features, setFeatures] = useState<string[]>([]);
+  const [newFeature, setNewFeature] = useState("");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   const {
     register,
@@ -68,11 +80,44 @@ export default function CreatePackagePage() {
       isActive: true,
       isFeatured: false,
       testSeriesIds: [],
+      features: [],
+      subjects: [],
+      examTypes: [],
     },
   });
 
   const validityUnit = watch("validityUnit");
   const maxEnrollments = watch("maxEnrollments");
+  const category = watch("category");
+
+  // Fetch available tests on mount
+  useEffect(() => {
+    const fetchTests = async () => {
+      setIsLoadingTests(true);
+      try {
+        // Fetch all tests - API status values: UPCOMING, LIVE, COMPLETED
+        const response = await testService.getTests({
+          limit: 100,
+        });
+        setAvailableTests(response.data || []);
+      } catch (error) {
+        console.error("Error fetching tests:", error);
+        toast.error("Failed to load available tests");
+      } finally {
+        setIsLoadingTests(false);
+      }
+    };
+    fetchTests();
+  }, []);
+
+  // Update subjects when category changes
+  useEffect(() => {
+    if (category) {
+      setSelectedSubjects([]);
+      setValue("subjects", []);
+      setValue("examTypes", [category]);
+    }
+  }, [category, setValue]);
 
   const handleAddTest = (testId: string) => {
     if (!selectedTests.includes(testId)) {
@@ -88,22 +133,81 @@ export default function CreatePackagePage() {
     setValue("testSeriesIds", updated);
   };
 
-  const onSubmit = (data: PackageFormValues) => {
-    const payload = {
-      ...data,
-      bannerImage,
-      testSeriesIds: selectedTests,
-      createdAt: new Date().toISOString(),
-    };
+  const handleAddFeature = () => {
+    if (newFeature.trim()) {
+      const updated = [...features, newFeature.trim()];
+      setFeatures(updated);
+      setValue("features", updated);
+      setNewFeature("");
+    }
+  };
 
-    console.log("Create Package Payload:", payload);
-    toast.success("Package created successfully!", {
-      description: "Check console for complete payload",
-    });
+  const handleRemoveFeature = (index: number) => {
+    const updated = features.filter((_, i) => i !== index);
+    setFeatures(updated);
+    setValue("features", updated);
+  };
 
-    reset();
-    setBannerImage("");
-    setSelectedTests([]);
+  const handleSubjectToggle = (subject: string) => {
+    const updated = selectedSubjects.includes(subject)
+      ? selectedSubjects.filter((s) => s !== subject)
+      : [...selectedSubjects, subject];
+    setSelectedSubjects(updated);
+    setValue("subjects", updated);
+  };
+
+  const onSubmit = async (data: PackageFormValues) => {
+    try {
+      // Map form data to API payload
+      const apiPayload = mapFormToApiPayload({
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        price: data.price,
+        discountPercentage: data.discountPercentage,
+        earlyBirdPrice: data.earlyBirdPrice,
+        validityPeriod: data.validityPeriod,
+        validityUnit: data.validityUnit,
+        maxEnrollments: data.maxEnrollments,
+        enableWaitlist: data.enableWaitlist ?? false,
+        enableSequentialUnlock: data.enableSequentialUnlock ?? false,
+        accessStartDate: data.accessStartDate,
+        isActive: data.isActive ?? true,
+        isFeatured: data.isFeatured ?? false,
+        bannerImage,
+        testSeriesIds: selectedTests,
+        features,
+        subjects: selectedSubjects,
+        examTypes: [data.category],
+      });
+
+      console.log(
+        "📦 Create Package Payload:",
+        JSON.stringify(apiPayload, null, 2)
+      );
+
+      const response = await createPackage(apiPayload);
+
+      toast.success("Package created successfully!", {
+        description: `Package "${response.data.title}" has been created.`,
+      });
+
+      // Reset form and state
+      reset();
+      setBannerImage("");
+      setSelectedTests([]);
+      setFeatures([]);
+      setSelectedSubjects([]);
+
+      // Navigate to packages list
+      router.push("/packages");
+    } catch (error) {
+      console.error("❌ Error creating package:", error);
+      toast.error("Failed to create package", {
+        description:
+          error instanceof Error ? error.message : "Please try again",
+      });
+    }
   };
 
   return (
@@ -121,7 +225,9 @@ export default function CreatePackagePage() {
           <Card>
             <CardHeader>
               <CardTitle>Basic Details</CardTitle>
-              <CardDescription>Package information and branding</CardDescription>
+              <CardDescription>
+                Package information and branding
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -133,13 +239,17 @@ export default function CreatePackagePage() {
                     {...register("name")}
                   />
                   {errors.name && (
-                    <p className="text-sm text-red-600">{errors.name.message}</p>
+                    <p className="text-sm text-red-600">
+                      {errors.name.message}
+                    </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
-                  <Select onValueChange={(value) => setValue("category", value)}>
+                  <Select
+                    onValueChange={(value) => setValue("category", value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -153,7 +263,9 @@ export default function CreatePackagePage() {
                     </SelectContent>
                   </Select>
                   {errors.category && (
-                    <p className="text-sm text-red-600">{errors.category.message}</p>
+                    <p className="text-sm text-red-600">
+                      {errors.category.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -168,7 +280,9 @@ export default function CreatePackagePage() {
                   {...register("description")}
                 />
                 {errors.description && (
-                  <p className="text-sm text-red-600">{errors.description.message}</p>
+                  <p className="text-sm text-red-600">
+                    {errors.description.message}
+                  </p>
                 )}
               </div>
 
@@ -185,7 +299,9 @@ export default function CreatePackagePage() {
           <Card>
             <CardHeader>
               <CardTitle>Pricing</CardTitle>
-              <CardDescription>Set package pricing and discounts</CardDescription>
+              <CardDescription>
+                Set package pricing and discounts
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -197,7 +313,9 @@ export default function CreatePackagePage() {
                     {...register("price", { valueAsNumber: true })}
                   />
                   {errors.price && (
-                    <p className="text-sm text-red-600">{errors.price.message}</p>
+                    <p className="text-sm text-red-600">
+                      {errors.price.message}
+                    </p>
                   )}
                 </div>
 
@@ -220,6 +338,81 @@ export default function CreatePackagePage() {
                     {...register("earlyBirdPrice", { valueAsNumber: true })}
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Subjects & Features */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Subjects & Features</CardTitle>
+              <CardDescription>
+                Select subjects covered and highlight package features
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Subjects */}
+              {category && subjectsByCategory[category] && (
+                <div className="space-y-3">
+                  <Label>Subjects Covered</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {subjectsByCategory[category].map((subject) => (
+                      <button
+                        key={subject}
+                        type="button"
+                        onClick={() => handleSubjectToggle(subject)}
+                        className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                          selectedSubjects.includes(subject)
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-700 border-gray-300 hover:border-blue-300"
+                        }`}
+                      >
+                        {subject}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Features */}
+              <div className="space-y-3">
+                <Label>Package Features</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g., 50+ Full Length Mock Tests"
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddFeature();
+                      }
+                    }}
+                  />
+                  <Button type="button" onClick={handleAddFeature}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                {features.length > 0 && (
+                  <div className="space-y-2">
+                    {features.map((feature, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                      >
+                        <span className="text-sm">{feature}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveFeature(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -248,21 +441,28 @@ export default function CreatePackagePage() {
               {selectedTests.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p>No tests selected</p>
-                  <p className="text-sm mt-1">Click "Add Tests" to select</p>
+                  <p className="text-sm mt-1">
+                    Click &quot;Add Tests&quot; to select
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {selectedTests.map((testId) => {
-                    const test = mockAvailableTests.find((t) => t.id === testId);
+                    const test = availableTests.find((t) => t._id === testId);
                     return (
                       <div
                         key={testId}
                         className="flex items-center justify-between p-3 border rounded-lg"
                       >
                         <div>
-                          <p className="font-medium">{test?.name}</p>
+                          <p className="font-medium">
+                            {test?.title || "Unknown Test"}
+                          </p>
                           <p className="text-sm text-gray-500">
-                            {test?.questionsCount} questions
+                            {test?.totalQuestions ||
+                              test?.questions?.length ||
+                              0}{" "}
+                            questions
                           </p>
                         </div>
                         <Button
@@ -288,26 +488,40 @@ export default function CreatePackagePage() {
               {showTestSelector && (
                 <div className="mt-4 p-4 border rounded-lg bg-gray-50">
                   <h4 className="font-medium mb-3">Available Tests</h4>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {mockAvailableTests.map((test) => (
-                      <button
-                        key={test.id}
-                        type="button"
-                        onClick={() => handleAddTest(test.id)}
-                        disabled={selectedTests.includes(test.id)}
-                        className={`w-full text-left p-3 border rounded-lg transition ${
-                          selectedTests.includes(test.id)
-                            ? "bg-gray-100 opacity-50 cursor-not-allowed"
-                            : "hover:bg-white hover:border-blue-300"
-                        }`}
-                      >
-                        <p className="font-medium">{test.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {test.questionsCount} questions
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+                  {isLoadingTests ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                      <span className="ml-2 text-gray-500">
+                        Loading tests...
+                      </span>
+                    </div>
+                  ) : availableTests.length === 0 ? (
+                    <p className="text-center py-4 text-gray-500">
+                      No published tests available
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {availableTests.map((test) => (
+                        <button
+                          key={test._id}
+                          type="button"
+                          onClick={() => handleAddTest(test._id)}
+                          disabled={selectedTests.includes(test._id)}
+                          className={`w-full text-left p-3 border rounded-lg transition ${
+                            selectedTests.includes(test._id)
+                              ? "bg-gray-100 opacity-50 cursor-not-allowed"
+                              : "hover:bg-white hover:border-blue-300"
+                          }`}
+                        >
+                          <p className="font-medium">{test.title}</p>
+                          <p className="text-sm text-gray-500">
+                            {test.totalQuestions || test.questions?.length || 0}{" "}
+                            questions • {test.category}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -336,7 +550,9 @@ export default function CreatePackagePage() {
                   <Label htmlFor="validityUnit">Unit</Label>
                   <Select
                     value={validityUnit}
-                    onValueChange={(value) => setValue("validityUnit", value as any)}
+                    onValueChange={(value) =>
+                      setValue("validityUnit", value as any)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -396,8 +612,12 @@ export default function CreatePackagePage() {
                       setValue("enableSequentialUnlock", checked as boolean)
                     }
                   />
-                  <Label htmlFor="enableSequentialUnlock" className="cursor-pointer">
-                    Enable sequential unlock (unlock next test after completing previous)
+                  <Label
+                    htmlFor="enableSequentialUnlock"
+                    className="cursor-pointer"
+                  >
+                    Enable sequential unlock (unlock next test after completing
+                    previous)
                   </Label>
                 </div>
               </div>
@@ -441,11 +661,28 @@ export default function CreatePackagePage() {
 
           {/* Submit */}
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => reset()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                reset();
+                setBannerImage("");
+                setSelectedTests([]);
+                setFeatures([]);
+                setSelectedSubjects([]);
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Package"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Package"
+              )}
             </Button>
           </div>
         </form>
