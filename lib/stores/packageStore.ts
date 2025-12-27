@@ -1,15 +1,19 @@
 import { create } from "zustand";
 import {
   Package,
+  PackageDetails,
   PackageFilters,
   getPackages,
+  getPackageById as fetchPackageByIdApi,
   deletePackage,
 } from "@/lib/services/package.service";
 
 interface PackageStore {
   // State
   packages: Package[];
+  selectedPackage: PackageDetails | null;
   loading: boolean;
+  loadingDetails: boolean;
   error: string | null;
   pagination: {
     total: number;
@@ -33,10 +37,12 @@ interface PackageStore {
     filters?: PackageFilters,
     forceRefresh?: boolean
   ) => Promise<void>;
+  fetchPackageById: (id: string) => Promise<PackageDetails>;
   setFilters: (filters: PackageFilters) => void;
   deletePackage: (id: string) => Promise<void>;
   clearPackages: () => void;
-  getPackageById: (id: string) => Package | undefined;
+  clearSelectedPackage: () => void;
+  getPackageFromCache: (id: string) => Package | undefined;
   invalidateCache: () => void;
 }
 
@@ -45,7 +51,9 @@ const CACHE_DURATION = 5 * 60 * 1000;
 
 export const usePackageStore = create<PackageStore>((set, get) => ({
   packages: [],
+  selectedPackage: null,
   loading: false,
+  loadingDetails: false,
   error: null,
   pagination: {
     total: 0,
@@ -176,8 +184,45 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
     });
   },
 
-  getPackageById: (id: string) => {
+  clearSelectedPackage: () => {
+    set({ selectedPackage: null });
+  },
+
+  getPackageFromCache: (id: string) => {
     return get().packages.find((pkg) => pkg._id === id);
+  },
+
+  fetchPackageById: async (id: string) => {
+    set({ loadingDetails: true, error: null });
+
+    // First, try to find in cache (list already has populated tests)
+    const cachedPackage = get().packages.find((pkg) => pkg._id === id);
+
+    try {
+      const packageDetails = await fetchPackageByIdApi(id);
+      set({ selectedPackage: packageDetails, loadingDetails: false });
+      return packageDetails;
+    } catch (error: unknown) {
+      // If API fails but we have cached data, use it
+      if (cachedPackage) {
+        // Cast to PackageDetails since list API returns populated tests
+        const packageDetails = cachedPackage as unknown as PackageDetails;
+        set({
+          selectedPackage: packageDetails,
+          loadingDetails: false,
+          error: null,
+        });
+        return packageDetails;
+      }
+
+      // No cached data, throw error
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch package details";
+      set({ error: errorMessage, loadingDetails: false });
+      throw new Error(errorMessage);
+    }
   },
 
   invalidateCache: () => {

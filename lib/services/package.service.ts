@@ -48,6 +48,16 @@ export interface CreatePackagePayload {
   metadata?: PackageMetadata;
 }
 
+// Populated test object (when fetched with package details)
+export interface PackageTest {
+  _id: string;
+  title: string;
+  category: string;
+  type: string;
+  duration: number;
+  totalMarks: number;
+}
+
 // Package response from API
 export interface Package {
   _id: string;
@@ -79,10 +89,21 @@ export interface Package {
   enableWaitlist: boolean;
   sequentialUnlock: boolean;
   isFeatured: boolean;
-  tests: string[];
+  tests: string[] | PackageTest[]; // Can be IDs or populated objects
   metadata?: PackageMetadata;
   createdAt: string;
   updatedAt: string;
+}
+
+// Package with populated tests (for detail view)
+export interface PackageDetails extends Omit<Package, "tests"> {
+  tests: PackageTest[];
+}
+
+export interface GetPackageResponse {
+  success: boolean;
+  message: string;
+  data: PackageDetails;
 }
 
 export interface CreatePackageResponse {
@@ -267,13 +288,11 @@ export const getPackages = async (
 };
 
 /**
- * Get a single package by ID
+ * Get a single package by ID with populated tests
  */
-export const getPackageById = async (id: string): Promise<Package> => {
+export const getPackageById = async (id: string): Promise<PackageDetails> => {
   try {
-    const response = await apiClient.get<{ success: boolean; data: Package }>(
-      `/packages/${id}`
-    );
+    const response = await apiClient.get<GetPackageResponse>(`/packages/${id}`);
     return response.data.data;
   } catch (error) {
     console.error("Error fetching package:", error);

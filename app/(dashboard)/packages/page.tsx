@@ -12,6 +12,7 @@ import {
   Filter,
   Loader2,
   RefreshCw,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -404,17 +405,27 @@ export default function PackagesPage() {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-4">
-                    <Link href={`/packages/${pkg._id}/edit`} className="flex-1">
+                    <Link href={`/packages/${pkg._id}`} className="flex-1">
                       <Button
                         variant="outline"
                         className="w-full flex items-center gap-2"
                       >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </Button>
+                    </Link>
+                    <Link href={`/packages/${pkg._id}/edit`}>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="flex items-center"
+                      >
                         <Edit className="w-4 h-4" />
-                        Edit
                       </Button>
                     </Link>
                     <Button
                       variant="outline"
+                      size="icon"
                       onClick={() => handleDelete(pkg._id, pkg.title)}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
