@@ -35,10 +35,13 @@ export default function PackagesPage() {
   const {
     packages,
     loading,
+    loadingStats,
     error,
     pagination,
     stats,
+    dashboardStats,
     fetchPackages,
+    fetchDashboardStats,
     deletePackage: deletePackageAction,
     invalidateCache,
   } = usePackageStore();
@@ -56,10 +59,14 @@ export default function PackagesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  // Fetch packages on mount
+  // Use dashboard stats from API if available, otherwise fallback to computed stats
+  const displayStats = dashboardStats || stats;
+
+  // Fetch packages and dashboard stats on mount
   useEffect(() => {
     fetchPackages();
-  }, [fetchPackages]);
+    fetchDashboardStats();
+  }, [fetchPackages, fetchDashboardStats]);
 
   // Handle search with debounce
   useEffect(() => {
@@ -109,6 +116,7 @@ export default function PackagesPage() {
   const handleRefresh = () => {
     invalidateCache();
     fetchPackages(undefined, true);
+    fetchDashboardStats(true);
   };
 
   // Format validity days to readable format
@@ -162,10 +170,10 @@ export default function PackagesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {loading ? (
+                {loading || loadingStats ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  stats.totalPackages
+                  displayStats.totalPackages
                 )}
               </div>
             </CardContent>
@@ -179,10 +187,10 @@ export default function PackagesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {loading ? (
+                {loading || loadingStats ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  stats.totalEnrollments.toLocaleString()
+                  displayStats.totalEnrollments.toLocaleString()
                 )}
               </div>
             </CardContent>
@@ -196,10 +204,10 @@ export default function PackagesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {loading ? (
+                {loading || loadingStats ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  `₹${stats.totalRevenue.toLocaleString()}`
+                  `₹${displayStats.totalRevenue.toLocaleString()}`
                 )}
               </div>
             </CardContent>
@@ -213,10 +221,10 @@ export default function PackagesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {loading ? (
+                {loading || loadingStats ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  stats.activePackages
+                  displayStats.activePackages
                 )}
               </div>
             </CardContent>

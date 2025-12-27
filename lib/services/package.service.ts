@@ -331,11 +331,190 @@ export const deletePackage = async (id: string): Promise<void> => {
   }
 };
 
+// ============ Add/Remove Tests from Package ============
+
+export interface AddTestResponse {
+  success: boolean;
+  message: string;
+  data: {
+    _id: string;
+    title: string;
+    totalTests: number;
+    tests: string[];
+  };
+}
+
+/**
+ * Add a test to a package
+ */
+export const addTestToPackage = async (
+  packageId: string,
+  testId: string
+): Promise<AddTestResponse> => {
+  try {
+    const response = await apiClient.post<AddTestResponse>(
+      `/packages/${packageId}/tests/${testId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error adding test to package:", error);
+    throw new Error(handleApiError(error));
+  }
+};
+
+/**
+ * Remove a test from a package
+ */
+export const removeTestFromPackage = async (
+  packageId: string,
+  testId: string
+): Promise<AddTestResponse> => {
+  try {
+    const response = await apiClient.delete<AddTestResponse>(
+      `/packages/${packageId}/tests/${testId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error removing test from package:", error);
+    throw new Error(handleApiError(error));
+  }
+};
+
+// ============ Dashboard Stats ============
+
+export interface DashboardStats {
+  totalPackages: number;
+  activePackages: number;
+  totalEnrollments: number;
+  totalRevenue: number;
+}
+
+export interface DashboardStatsResponse {
+  success: boolean;
+  message: string;
+  data: DashboardStats;
+}
+
+/**
+ * Get dashboard statistics for packages
+ */
+export const getDashboardStats = async (): Promise<DashboardStats> => {
+  try {
+    const response = await apiClient.get<DashboardStatsResponse>(
+      "/packages/dashboard/stats"
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    throw new Error(handleApiError(error));
+  }
+};
+
+// ============ Featured Packages ============
+
+export interface FeaturedPackage {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  discountPrice?: number;
+  banner?: string;
+  totalTests: number;
+  enrollments: number;
+  status: PackageStatus;
+}
+
+export interface FeaturedPackagesResponse {
+  success: boolean;
+  message: string;
+  data: FeaturedPackage[];
+}
+
+/**
+ * Get featured packages for homepage display
+ */
+export const getFeaturedPackages = async (): Promise<FeaturedPackage[]> => {
+  try {
+    const response = await apiClient.get<FeaturedPackagesResponse>(
+      "/packages/featured"
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching featured packages:", error);
+    throw new Error(handleApiError(error));
+  }
+};
+
+// ============ Test Access ============
+
+export interface TestAccessResponse {
+  canAccess: boolean;
+  reason?: string;
+  nextTest?: string;
+}
+
+/**
+ * Check if user can access a specific test (for sequential unlock)
+ */
+export const checkTestAccess = async (
+  packageId: string,
+  testId: string
+): Promise<TestAccessResponse> => {
+  try {
+    const response = await apiClient.get<TestAccessResponse>(
+      `/packages/${packageId}/tests/${testId}/access`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error checking test access:", error);
+    throw new Error(handleApiError(error));
+  }
+};
+
+// ============ Waitlist ============
+
+export interface WaitlistStatus {
+  enrollments: number;
+  maxEnrollments: number;
+  isFull: boolean;
+  waitlistEnabled: boolean;
+  waitlistActive: boolean;
+  spotsRemaining: number;
+}
+
+export interface WaitlistStatusResponse {
+  success: boolean;
+  data: WaitlistStatus;
+}
+
+/**
+ * Get waitlist status for a package
+ */
+export const getWaitlistStatus = async (
+  packageId: string
+): Promise<WaitlistStatus> => {
+  try {
+    const response = await apiClient.get<WaitlistStatusResponse>(
+      `/packages/${packageId}/waitlist`
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching waitlist status:", error);
+    throw new Error(handleApiError(error));
+  }
+};
+
 export default {
   createPackage,
   getPackages,
   getPackageById,
   updatePackage,
   deletePackage,
+  addTestToPackage,
+  removeTestFromPackage,
+  getDashboardStats,
+  getFeaturedPackages,
+  checkTestAccess,
+  getWaitlistStatus,
   mapFormToApiPayload,
 };

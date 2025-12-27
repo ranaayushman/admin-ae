@@ -3,17 +3,28 @@ import {
   Package,
   PackageDetails,
   PackageFilters,
+  DashboardStats,
+  FeaturedPackage,
+  WaitlistStatus,
   getPackages,
   getPackageById as fetchPackageByIdApi,
   deletePackage,
+  getDashboardStats as fetchDashboardStats,
+  getFeaturedPackages as fetchFeaturedPackagesApi,
+  addTestToPackage as addTestToPackageApi,
+  removeTestFromPackage as removeTestFromPackageApi,
+  getWaitlistStatus as fetchWaitlistStatusApi,
 } from "@/lib/services/package.service";
 
 interface PackageStore {
   // State
   packages: Package[];
   selectedPackage: PackageDetails | null;
+  featuredPackages: FeaturedPackage[];
   loading: boolean;
   loadingDetails: boolean;
+  loadingStats: boolean;
+  loadingFeatured: boolean;
   error: string | null;
   pagination: {
     total: number;
@@ -23,8 +34,12 @@ interface PackageStore {
   };
   filters: PackageFilters;
   lastFetched: number | null;
+  lastStatsFetched: number | null;
 
-  // Computed stats
+  // Dashboard stats from API
+  dashboardStats: DashboardStats | null;
+
+  // Computed stats (fallback if API fails)
   stats: {
     totalPackages: number;
     totalEnrollments: number;
@@ -38,6 +53,11 @@ interface PackageStore {
     forceRefresh?: boolean
   ) => Promise<void>;
   fetchPackageById: (id: string) => Promise<PackageDetails>;
+  fetchDashboardStats: (forceRefresh?: boolean) => Promise<DashboardStats>;
+  fetchFeaturedPackages: () => Promise<FeaturedPackage[]>;
+  addTestToPackage: (packageId: string, testId: string) => Promise<void>;
+  removeTestFromPackage: (packageId: string, testId: string) => Promise<void>;
+  fetchWaitlistStatus: (packageId: string) => Promise<WaitlistStatus>;
   setFilters: (filters: PackageFilters) => void;
   deletePackage: (id: string) => Promise<void>;
   clearPackages: () => void;
@@ -52,8 +72,11 @@ const CACHE_DURATION = 5 * 60 * 1000;
 export const usePackageStore = create<PackageStore>((set, get) => ({
   packages: [],
   selectedPackage: null,
+  featuredPackages: [],
   loading: false,
   loadingDetails: false,
+  loadingStats: false,
+  loadingFeatured: false,
   error: null,
   pagination: {
     total: 0,
@@ -66,6 +89,8 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
     limit: 10,
   },
   lastFetched: null,
+  lastStatsFetched: null,
+  dashboardStats: null,
   stats: {
     totalPackages: 0,
     totalEnrollments: 0,
@@ -225,7 +250,136 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
     }
   },
 
+  // Fetch dashboard stats from API
+  fetchDashboardStats: async (forceRefresh = false) => {
+    const state = get();
+    const now = Date.now();
+
+    // Check cache validity
+    if (
+      !forceRefresh &&
+      state.lastStatsFetched &&
+      now - state.lastStatsFetched < CACHE_DURATION &&
+      state.dashboardStats
+    ) {
+      return state.dashboardStats;
+    }
+
+    set({ loadingStats: true });
+
+    try {
+      const stats = await fetchDashboardStats();
+      set({
+        dashboardStats: stats,
+        lastStatsFetched: now,
+        loadingStats: false,
+      });
+      return stats;
+    } catch (error: unknown) {
+      // Fallback to computed stats if API fails
+      set({ loadingStats: false });
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch dashboard stats";
+      console.error(errorMessage);
+      // Return computed stats as fallback
+      return state.stats as DashboardStats;
+    }
+  },
+
+  // Fetch featured packages
+  fetchFeaturedPackages: async () => {
+    set({ loadingFeatured: true });
+
+    try {
+      const featuredPackages = await fetchFeaturedPackagesApi();
+      set({ featuredPackages, loadingFeatured: false });
+      return featuredPackages;
+    } catch (error: unknown) {
+      set({ loadingFeatured: false });
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch featured packages";
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Add test to package
+  addTestToPackage: async (packageId: string, testId: string) => {
+    try {
+      const response = await addTestToPackageApi(packageId, testId);
+
+      // Update selected package if it's the one being modified
+      const selectedPackage = get().selectedPackage;
+      if (selectedPackage && selectedPackage._id === packageId) {
+        set({
+          selectedPackage: {
+            ...selectedPackage,
+            totalTests: response.data.totalTests,
+          },
+        });
+      }
+
+      // Invalidate cache to refetch fresh data
+      get().invalidateCache();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to add test to package";
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Remove test from package
+  removeTestFromPackage: async (packageId: string, testId: string) => {
+    try {
+      const response = await removeTestFromPackageApi(packageId, testId);
+
+      // Update selected package if it's the one being modified
+      const selectedPackage = get().selectedPackage;
+      if (selectedPackage && selectedPackage._id === packageId) {
+        // Remove test from tests array
+        const updatedTests = selectedPackage.tests.filter(
+          (test) => test._id !== testId
+        );
+        set({
+          selectedPackage: {
+            ...selectedPackage,
+            tests: updatedTests,
+            totalTests: response.data.totalTests,
+          },
+        });
+      }
+
+      // Invalidate cache to refetch fresh data
+      get().invalidateCache();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to remove test from package";
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Fetch waitlist status
+  fetchWaitlistStatus: async (packageId: string) => {
+    try {
+      const status = await fetchWaitlistStatusApi(packageId);
+      return status;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch waitlist status";
+      throw new Error(errorMessage);
+    }
+  },
+
   invalidateCache: () => {
-    set({ lastFetched: null });
+    set({ lastFetched: null, lastStatsFetched: null });
   },
 }));

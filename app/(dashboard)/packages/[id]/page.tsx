@@ -1,7 +1,7 @@
 // app/packages/[id]/page.tsx
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,11 +16,17 @@ import {
   Star,
   Tag,
   Loader2,
+  Plus,
+  Trash2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { usePackageStore } from "@/lib/stores/packageStore";
+import { WaitlistStatus } from "@/lib/services/package.service";
+import { toast } from "sonner";
 
 export default function PackageDetailPage() {
   const params = useParams();
@@ -35,8 +41,21 @@ export default function PackageDetailPage() {
     error,
     fetchPackages,
     fetchPackageById,
+    fetchWaitlistStatus,
+    removeTestFromPackage,
     clearSelectedPackage,
   } = usePackageStore();
+
+  const [removeTestDialog, setRemoveTestDialog] = useState<{
+    isOpen: boolean;
+    testId: string | null;
+    testTitle: string;
+  }>({ isOpen: false, testId: null, testTitle: "" });
+  const [isRemovingTest, setIsRemovingTest] = useState(false);
+  const [waitlistStatus, setWaitlistStatus] = useState<WaitlistStatus | null>(
+    null
+  );
+  const [loadingWaitlist, setLoadingWaitlist] = useState(false);
 
   useEffect(() => {
     // Ensure packages list is loaded (for fallback cache)
@@ -48,12 +67,57 @@ export default function PackageDetailPage() {
   useEffect(() => {
     if (packageId && packages.length > 0) {
       fetchPackageById(packageId);
+
+      // Also fetch waitlist status if package has waitlist enabled
+      const loadWaitlistStatus = async () => {
+        setLoadingWaitlist(true);
+        try {
+          const status = await fetchWaitlistStatus(packageId);
+          setWaitlistStatus(status);
+        } catch {
+          // Silently fail - waitlist status is optional
+          console.log("Waitlist status not available");
+        } finally {
+          setLoadingWaitlist(false);
+        }
+      };
+      loadWaitlistStatus();
     }
 
     return () => {
       clearSelectedPackage();
     };
-  }, [packageId, packages.length, fetchPackageById, clearSelectedPackage]);
+  }, [
+    packageId,
+    packages.length,
+    fetchPackageById,
+    fetchWaitlistStatus,
+    clearSelectedPackage,
+  ]);
+
+  // Handle remove test from package
+  const handleRemoveTest = (testId: string, testTitle: string) => {
+    setRemoveTestDialog({ isOpen: true, testId, testTitle });
+  };
+
+  const confirmRemoveTest = async () => {
+    if (!removeTestDialog.testId) return;
+
+    setIsRemovingTest(true);
+    try {
+      await removeTestFromPackage(packageId, removeTestDialog.testId);
+      toast.success("Test removed from package successfully");
+      setRemoveTestDialog({ isOpen: false, testId: null, testTitle: "" });
+      // Refresh package data
+      fetchPackageById(packageId);
+    } catch (err) {
+      toast.error("Failed to remove test", {
+        description: err instanceof Error ? err.message : "Please try again",
+      });
+    } finally {
+      setIsRemovingTest(false);
+    }
+  };
 
   // Format validity days to readable format
   const formatValidity = (days: number): string => {
@@ -252,9 +316,17 @@ export default function PackageDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>Included Tests</span>
-                  <span className="text-sm font-normal text-gray-500">
-                    {pkg.tests?.length || 0} tests
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-normal text-gray-500">
+                      {pkg.tests?.length || 0} tests
+                    </span>
+                    <Link href={`/packages/${packageId}/add-tests`}>
+                      <Button variant="outline" size="sm">
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add Tests
+                      </Button>
+                    </Link>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -263,7 +335,7 @@ export default function PackageDetailPage() {
                     {pkg.tests.map((test) => (
                       <div
                         key={test._id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-white rounded-lg border">
@@ -278,19 +350,42 @@ export default function PackageDetailPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="text-right text-sm">
-                          <p className="text-gray-600">{test.duration} mins</p>
-                          <p className="text-gray-500">
-                            {test.totalMarks} marks
-                          </p>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right text-sm">
+                            <p className="text-gray-600">
+                              {test.duration} mins
+                            </p>
+                            <p className="text-gray-500">
+                              {test.totalMarks} marks
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() =>
+                              handleRemoveTest(test._id, test.title)
+                            }
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-4">
-                    No tests added to this package
-                  </p>
+                  <div className="text-center py-8">
+                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 mb-4">
+                      No tests added to this package
+                    </p>
+                    <Link href={`/packages/${packageId}/add-tests`}>
+                      <Button variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Tests
+                      </Button>
+                    </Link>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -305,7 +400,7 @@ export default function PackageDetailPage() {
                   <ul className="space-y-2">
                     {pkg.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
                         <span className="text-gray-700">{feature}</span>
                       </li>
                     ))}
@@ -485,9 +580,114 @@ export default function PackageDetailPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Waitlist Status */}
+            {pkg.enableWaitlist && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Waitlist Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loadingWaitlist ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    </div>
+                  ) : waitlistStatus ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Enrollment Status</span>
+                        <span
+                          className={`font-medium ${
+                            waitlistStatus.isFull
+                              ? "text-red-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {waitlistStatus.isFull ? "Full" : "Open"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Spots Remaining</span>
+                        <span className="font-medium">
+                          {waitlistStatus.spotsRemaining}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Waitlist Active</span>
+                        <span
+                          className={`font-medium ${
+                            waitlistStatus.waitlistActive
+                              ? "text-orange-600"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {waitlistStatus.waitlistActive ? "Yes" : "No"}
+                        </span>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="pt-2">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                          <span>
+                            {waitlistStatus.enrollments} /{" "}
+                            {waitlistStatus.maxEnrollments}
+                          </span>
+                          <span>
+                            {Math.round(
+                              (waitlistStatus.enrollments /
+                                waitlistStatus.maxEnrollments) *
+                                100
+                            )}
+                            %
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              waitlistStatus.isFull
+                                ? "bg-red-500"
+                                : "bg-green-500"
+                            }`}
+                            style={{
+                              width: `${Math.min(
+                                (waitlistStatus.enrollments /
+                                  waitlistStatus.maxEnrollments) *
+                                  100,
+                                100
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Waitlist status unavailable</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Remove Test Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={removeTestDialog.isOpen}
+        onClose={() =>
+          setRemoveTestDialog({ isOpen: false, testId: null, testTitle: "" })
+        }
+        onConfirm={confirmRemoveTest}
+        title="Remove Test from Package"
+        description={`Are you sure you want to remove "${removeTestDialog.testTitle}" from this package? Students who have enrolled will no longer have access to this test.`}
+        confirmText={isRemovingTest ? "Removing..." : "Remove Test"}
+        variant="danger"
+        isLoading={isRemovingTest}
+      />
     </div>
   );
 }
