@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://aspiring-engineers-api-dbbcfdascdezgvcx.centralindia-01.azurewebsites.net/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ;
 const MAX_REFRESH_RETRIES = 3;
 
 // Token management helpers for admin
