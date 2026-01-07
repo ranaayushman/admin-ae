@@ -5,11 +5,15 @@ import axios, {
 } from "axios";
 import { tokenManager } from "@/lib/utils/tokenManager";
 
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  console.warn(
+    "⚠️ NEXT_PUBLIC_API_URL is not set. Please configure it in your .env file."
+  );
+}
+
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
-  baseURL:
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://nhgj9d2g-8080.inc1.devtunnels.ms/api/v1",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "",
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
@@ -77,13 +81,9 @@ apiClient.interceptors.response.use(
           const response = await axios.post<{
             accessToken: string;
             refreshToken?: string;
-          }>(
-            `${
-              process.env.NEXT_PUBLIC_API_URL ||
-              "https://aspiring-engineers-api-dbbcfdascdezgvcx.centralindia-01.azurewebsites.net/api/v1"
-            }/auth/refresh`,
-            { refreshToken }
-          );
+          }>(`${process.env.NEXT_PUBLIC_API_URL || ""}/auth/refresh`, {
+            refreshToken,
+          });
 
           // CRITICAL: Immediately store the new tokens
           const { accessToken, refreshToken: newRefreshToken } = response.data;
