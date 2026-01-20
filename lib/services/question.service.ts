@@ -30,10 +30,23 @@ export const questionService = {
     try {
       const response = await apiClient.post<CreateQuestionResponse>('/questions', data);
       
-      console.log('✅ Question created successfully:', response.data.message);
+      console.log('✅ Question created successfully:', response.data);
       
-      return normalizeQuestion(response.data.data);
+      // Handle different response structures:
+      // API might return { data: question } or { data: { data: question, message: string } }
+      // or even just the question directly
+      const questionData = (response.data as any).data || response.data;
+      
+      // If questionData has _id, it's likely the question object
+      if (questionData && ((questionData as any)._id || (questionData as any).id)) {
+        return normalizeQuestion(questionData);
+      }
+      
+      // If we got here, the structure is unexpected but the request succeeded
+      // Return the normalized data anyway
+      return normalizeQuestion(questionData);
     } catch (error) {
+      console.error('❌ Error creating question:', error);
       throw new Error(handleApiError(error));
     }
   },
@@ -123,10 +136,13 @@ export const questionService = {
     try {
       const response = await apiClient.patch<CreateQuestionResponse>(`/questions/${id}`, data);
       
-      console.log('✅ Question updated successfully:', response.data.message);
+      console.log('✅ Question updated successfully:', response.data);
       
-      return normalizeQuestion(response.data.data);
+      // Handle different response structures
+      const questionData = (response.data as any).data || response.data;
+      return normalizeQuestion(questionData);
     } catch (error) {
+      console.error('❌ Error updating question:', error);
       throw new Error(handleApiError(error));
     }
   },
