@@ -18,6 +18,9 @@ import {
   UserPlus,
   GraduationCap,
   Sparkles,
+  HeartHandshake,
+  UserCheck,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
@@ -29,6 +32,18 @@ const navItems = [
   { name: "Packages", icon: FileText, path: "/packages" },
   { name: "Manual Enrollment", icon: Users, path: "/enrollments/manual" },
   { name: "Team Members", icon: UserPlus, path: "/team-members" },
+  // Counselling Section
+  {
+    name: "Counselling Packages",
+    icon: HeartHandshake,
+    path: "/counselling/packages",
+  },
+  { name: "Counsellors", icon: UserCheck, path: "/counselling/counsellors" },
+  {
+    name: "Counselling Inquiries",
+    icon: MessageSquare,
+    path: "/counselling/inquiries",
+  },
   {
     name: "PYQ Home (With Solution)",
     icon: ImageIcon,
@@ -102,7 +117,7 @@ export default function Sidebar({
                 >
                   <motion.div
                     whileHover={{ scale: 1.05 }}
-                    className="flex-shrink-0"
+                    className="shrink-0"
                   >
                     <item.icon className="w-5 h-5" />
                   </motion.div>
@@ -147,7 +162,7 @@ export default function Sidebar({
           className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-300 hover:bg-red-500/10 hover:text-red-400 transition-all group"
           title="Logout"
         >
-          <motion.div whileHover={{ scale: 1.05 }} className="flex-shrink-0">
+          <motion.div whileHover={{ scale: 1.05 }} className="shrink-0">
             <LogOut className="w-5 h-5" />
           </motion.div>
 

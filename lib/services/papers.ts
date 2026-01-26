@@ -7,6 +7,7 @@ export type PaperCategory =
   | "jee-main"
   | "jee-advanced"
   | "wbjee"
+  | "boards"
   | "boards-10"
   | "boards-12"
   | "sample-10"

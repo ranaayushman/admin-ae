@@ -143,7 +143,7 @@ export function ImageUploadWithPreview({
       ) : (
         <div className="border rounded-lg p-4 bg-gray-50">
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-white border">
+            <div className="shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-white border">
               <img
                 src={preview}
                 alt="Preview"
@@ -167,7 +167,7 @@ export function ImageUploadWithPreview({
                   variant="ghost"
                   size="sm"
                   onClick={handleClear}
-                  className="flex-shrink-0 ml-2"
+                  className="shrink-0 ml-2"
                 >
                   <X className="w-4 h-4" />
                 </Button>

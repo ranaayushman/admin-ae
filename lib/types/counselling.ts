@@ -1,0 +1,242 @@
+// Counselling Types for Admin Panel
+
+export type ExamType = "jee" | "neet" | "wbjee";
+
+// Feature within a counselling package
+export interface CounsellingFeature {
+  title: string;
+  description?: string;
+  included: boolean;
+}
+
+// Counselling Package
+export interface CounsellingPackage {
+  _id: string;
+  name: string;
+  slug: string;
+  examType: ExamType;
+  description: string;
+  shortDescription?: string;
+  price: number;
+  discountPrice?: number;
+  discountPercentage?: number;
+  currency: string;
+  validityDays: number;
+  features: CounsellingFeature[];
+  maxSessions: number;
+  sessionDuration: number; // in minutes
+  highlights: string[];
+  counsellorIds: string[];
+  badge?: string;
+  badgeColor?: string;
+  isActive: boolean;
+  isFeatured: boolean;
+  displayOrder: number;
+  termsAndConditions?: string;
+  totalEnrollments: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCounsellingPackagePayload {
+  name: string;
+  slug: string;
+  examType: ExamType;
+  description: string;
+  shortDescription?: string;
+  price: number;
+  discountPrice?: number;
+  discountPercentage?: number;
+  currency?: string;
+  validityDays: number;
+  features: CounsellingFeature[];
+  maxSessions: number;
+  sessionDuration: number;
+  highlights?: string[];
+  counsellorIds?: string[];
+  badge?: string;
+  badgeColor?: string;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  displayOrder?: number;
+  termsAndConditions?: string;
+}
+
+export interface UpdateCounsellingPackagePayload extends Partial<CreateCounsellingPackagePayload> {}
+
+// Counsellor Availability
+export interface TimeSlot {
+  start: string;
+  end: string;
+}
+
+export interface Availability {
+  monday: TimeSlot | null;
+  tuesday: TimeSlot | null;
+  wednesday: TimeSlot | null;
+  thursday: TimeSlot | null;
+  friday: TimeSlot | null;
+  saturday: TimeSlot | null;
+  sunday: TimeSlot | null;
+}
+
+// Counsellor
+export interface Counsellor {
+  _id: string;
+  name: string;
+  title: string;
+  email: string;
+  phone?: string;
+  image: string;
+  bio: string;
+  shortBio?: string;
+  qualifications: string[];
+  specializations: string[];
+  examTypes: ExamType[];
+  experience: number;
+  studentsGuided: number;
+  rating: number;
+  totalReviews: number;
+  languages: string[];
+  socialLinks?: {
+    linkedin?: string;
+    twitter?: string;
+  };
+  availability?: Availability;
+  isActive: boolean;
+  isFeatured: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCounsellorPayload {
+  name: string;
+  title: string;
+  email: string;
+  phone?: string;
+  imageBase64: string;
+  bio: string;
+  shortBio?: string;
+  qualifications: string[];
+  specializations: string[];
+  examTypes: ExamType[];
+  experience: number;
+  studentsGuided?: number;
+  rating?: number;
+  languages: string[];
+  socialLinks?: {
+    linkedin?: string;
+    twitter?: string;
+  };
+  availability?: Availability;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  displayOrder?: number;
+}
+
+export interface UpdateCounsellorPayload extends Partial<
+  Omit<CreateCounsellorPayload, "imageBase64">
+> {
+  imageBase64?: string;
+}
+
+// Counselling Inquiry (from admission guidance form)
+export interface CounsellingInquiry {
+  _id: string;
+  ticketNumber: string;
+  name: string;
+  email: string;
+  phone: string;
+  exam: string;
+  rank?: string;
+  category?: string;
+  state?: string;
+  message?: string;
+  status: "new" | "contacted" | "converted" | "closed";
+  assignedTo?: string;
+  notes?: string;
+  followUpDate?: string;
+  source?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateInquiryPayload {
+  status?: "new" | "contacted" | "converted" | "closed";
+  assignedTo?: string;
+  notes?: string;
+  followUpDate?: string;
+}
+
+// Enrollment
+export interface CounsellingEnrollment {
+  _id: string;
+  userId: string;
+  user?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  packageId: string;
+  package?: CounsellingPackage;
+  status: "active" | "expired" | "cancelled" | "refunded";
+  sessionsUsed: number;
+  sessionsRemaining: number;
+  paymentId?: string;
+  amountPaid: number;
+  couponCode?: string;
+  assignedCounsellor?: Counsellor;
+  enrolledAt: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// API Response Types
+export interface CounsellingPackagesResponse {
+  success: boolean;
+  data: CounsellingPackage[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface CounsellorsResponse {
+  success: boolean;
+  data: Counsellor[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface InquiriesResponse {
+  success: boolean;
+  data: CounsellingInquiry[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+  stats?: {
+    total: number;
+    new: number;
+    contacted: number;
+    converted: number;
+    closed: number;
+  };
+}
+
+export interface EnrollmentsResponse {
+  success: boolean;
+  data: CounsellingEnrollment[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
