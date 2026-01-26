@@ -15,6 +15,7 @@ import {
   PanelRightClose,
   Users,
   LogOut,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
@@ -25,8 +26,17 @@ const navItems = [
   { name: "Test Series", icon: ListChecks, path: "/test-series" },
   { name: "Packages", icon: FileText, path: "/packages" },
   { name: "Manual Enrollment", icon: Users, path: "/enrollments/manual" },
-  { name: "PYQ Home (With Solution)", icon: ImageIcon, path: "/pyq-home/with-solution" },
-  { name: "PYQ Home (No Solution)", icon: ImageIcon, path: "/pyq-home/without-solution" },
+  { name: "Team Members", icon: UserPlus, path: "/team-members" },
+  {
+    name: "PYQ Home (With Solution)",
+    icon: ImageIcon,
+    path: "/pyq-home/with-solution",
+  },
+  {
+    name: "PYQ Home (No Solution)",
+    icon: ImageIcon,
+    path: "/pyq-home/without-solution",
+  },
   { name: "Footer Links", icon: Settings, path: "/settings/footer" },
   { name: "Settings", icon: Settings, path: "/settings" },
 ];
@@ -45,7 +55,7 @@ export default function Sidebar({
     try {
       await logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
@@ -133,10 +143,7 @@ export default function Sidebar({
           className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-300 hover:bg-red-500/10 hover:text-red-400 transition-all group"
           title="Logout"
         >
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="flex-shrink-0"
-          >
+          <motion.div whileHover={{ scale: 1.05 }} className="flex-shrink-0">
             <LogOut className="w-5 h-5" />
           </motion.div>
 
