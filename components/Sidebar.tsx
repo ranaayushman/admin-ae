@@ -16,6 +16,8 @@ import {
   Users,
   LogOut,
   UserPlus,
+  GraduationCap,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
@@ -37,6 +39,8 @@ const navItems = [
     icon: ImageIcon,
     path: "/pyq-home/without-solution",
   },
+  { name: "Boards PYQ", icon: GraduationCap, path: "/boards-pyq" },
+  { name: "Sample Papers", icon: Sparkles, path: "/sample-papers" },
   { name: "Footer Links", icon: Settings, path: "/settings/footer" },
   { name: "Settings", icon: Settings, path: "/settings" },
 ];
