@@ -111,8 +111,13 @@ apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getAuthToken();
     
+    console.log("🔐 [apiClient] Interceptor - Token found?", !!token); // DEBUG
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log("🔐 [apiClient] Attached Authorization Header"); // DEBUG
+    } else {
+      console.warn("⚠️ [apiClient] No token attached to request"); // DEBUG
     }
     
     return config;

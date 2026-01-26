@@ -8,6 +8,14 @@ import {
   pyqWithoutSolutionSchema,
   PyqWithoutSolutionFormValues,
 } from "@/lib/validations/pyq-home-schema";
+import { papersService } from "@/lib/services/papers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -31,11 +39,12 @@ export default function PyqWithoutSolutionPage() {
     setValue,
     formState: { errors, isSubmitting },
     reset,
+    watch,
   } = useForm<PyqWithoutSolutionFormValues>({
     resolver: zodResolver(pyqWithoutSolutionSchema),
     defaultValues: {
       title: "",
-      exam: "",
+      category: "jee-main",
       year: new Date().getFullYear(),
       questionPaperLink: "",
       bannerImage: "",
@@ -44,23 +53,56 @@ export default function PyqWithoutSolutionPage() {
     },
   });
 
-  const onSubmit = (data: PyqWithoutSolutionFormValues) => {
-    const payload = {
-      ...data,
-      bannerImage,
-      createdAt: new Date().toISOString(),
-    };
+  const categoryValue = watch("category");
 
-    console.log("PYQ Without Solution Payload:", payload);
-    console.log("Banner Base64 Length:", bannerImage.length);
+  const onSubmit = async (data: PyqWithoutSolutionFormValues) => {
+    try {
+      console.log("🚀 [onSubmit] Submitting form...", data);
+      toast.info("Submitting...", { duration: 2000 });
 
-    toast.success("PYQ added to home page successfully!", {
-      description: "Check console for complete payload with base64 banner",
+      const payload = {
+        category: data.category,
+        year: data.year,
+        title: data.title,
+        paperDriveLink: data.questionPaperLink,
+        thumbnailBase64: bannerImage || undefined,
+        displayOrder: data.displayOrder,
+      };
+
+      console.log("🚀 [onSubmit] Payload prepared:", payload);
+      console.log("🚀 [onSubmit] API URL:", process.env.NEXT_PUBLIC_API_URL);
+      
+      await papersService.createNoSolution(payload);
+
+      console.log("✅ [onSubmit] Success!");
+      toast.success("PYQ added successfully!", {
+        description: "The paper has been added to the database.",
+      });
+
+      // Reset form
+      reset({
+        title: "",
+        category: "jee-main",
+        year: new Date().getFullYear(),
+        questionPaperLink: "",
+        bannerImage: "",
+        displayOrder: 1,
+      });
+      setBannerImage("");
+    } catch (error: any) {
+      console.error("❌ [onSubmit] Error caught:", error);
+      toast.error("Failed to create paper", {
+        description: error.response?.data?.message || error.message || "Unknown error",
+        duration: Infinity,
+      });
+    }
+  };
+
+  const onError = (errors: any) => {
+    console.error("❌ [onError] Validation failed:", errors);
+    toast.error("Form Validation Failed", {
+      description: "Please check the highlighted fields.",
     });
-
-    // Reset form
-    reset();
-    setBannerImage("");
   };
 
   return (
@@ -75,7 +117,10 @@ export default function PyqWithoutSolutionPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit(onSubmit, onError)(e);
+        }}>
           <Card>
             <CardHeader>
               <CardTitle>PYQ Details</CardTitle>
@@ -99,14 +144,25 @@ export default function PyqWithoutSolutionPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="exam">Exam *</Label>
-                  <Input
-                    id="exam"
-                    placeholder="NEET"
-                    {...register("exam")}
-                  />
-                  {errors.exam && (
-                    <p className="text-sm text-red-600">{errors.exam.message}</p>
+                  <Label htmlFor="category">Category *</Label>
+                  <Select
+                    onValueChange={(val: any) => setValue("category", val)}
+                    defaultValue={categoryValue}
+                    value={categoryValue}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jee-main">JEE Main</SelectItem>
+                      <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
+                      <SelectItem value="neet">NEET</SelectItem>
+                      <SelectItem value="wbjee">WBJEE</SelectItem>
+                      <SelectItem value="boards">Boards</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.category && (
+                    <p className="text-sm text-red-600">{errors.category.message}</p>
                   )}
                 </div>
               </div>

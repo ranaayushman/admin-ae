@@ -8,6 +8,14 @@ import {
   pyqWithSolutionSchema,
   PyqWithSolutionFormValues,
 } from "@/lib/validations/pyq-home-schema";
+import { papersService } from "@/lib/services/papers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -31,37 +39,76 @@ export default function PyqWithSolutionPage() {
     setValue,
     formState: { errors, isSubmitting },
     reset,
+    watch,
   } = useForm<PyqWithSolutionFormValues>({
     resolver: zodResolver(pyqWithSolutionSchema),
     defaultValues: {
       title: "",
-      exam: "",
+      category: "jee-main",
       year: new Date().getFullYear(),
       questionPaperLink: "",
       videoSolutionLink: "",
+      solutionDriveLink: "",
       bannerImage: "",
       displayOrder: 1,
       isActive: true,
     },
   });
 
-  const onSubmit = (data: PyqWithSolutionFormValues) => {
-    const payload = {
-      ...data,
-      bannerImage,
-      createdAt: new Date().toISOString(),
-    };
+  const categoryValue = watch("category");
 
-    console.log("PYQ With Solution Payload:", payload);
-    console.log("Banner Base64 Length:", bannerImage.length);
+  const onSubmit = async (data: PyqWithSolutionFormValues) => {
+    try {
+      console.log("🚀 [onSubmit] Submitting form...", data);
+      toast.info("Submitting...", { duration: 2000 }); // VISUAL FEEDBACK
 
-    toast.success("PYQ added to home page successfully!", {
-      description: "Check console for complete payload with base64 banner",
+      const payload = {
+        category: data.category,
+        year: data.year,
+        title: data.title,
+        paperDriveLink: data.questionPaperLink,
+        solutionDriveLink: data.solutionDriveLink,
+        thumbnailBase64: bannerImage,
+        videoSolutionLink: data.videoSolutionLink || undefined,
+        displayOrder: data.displayOrder,
+      };
+
+      console.log("🚀 [onSubmit] Payload prepared:", payload);
+      console.log("🚀 [onSubmit] API URL:", process.env.NEXT_PUBLIC_API_URL); // Log URL here too
+      
+      await papersService.createWithSolution(payload);
+
+      console.log("✅ [onSubmit] Success!");
+      toast.success("PYQ added successfully!", {
+        description: "The paper has been added to the database.",
+      });
+
+      // Reset form
+      reset({
+        title: "",
+        category: "jee-main", 
+        year: new Date().getFullYear(),
+        questionPaperLink: "",
+        videoSolutionLink: "",
+        solutionDriveLink: "",
+        bannerImage: "",
+        displayOrder: 1,
+      });
+      setBannerImage("");
+    } catch (error: any) {
+      console.error("❌ [onSubmit] Error caught:", error);
+      toast.error("Failed to create paper", {
+        description: error.response?.data?.message || error.message || "Unknown error",
+        duration: Infinity, // Keep toast visible to read error
+      });
+    }
+  };
+
+  const onError = (errors: any) => {
+    console.error("❌ [onError] Validation failed:", errors);
+    toast.error("Form Validation Failed", {
+      description: "Please check the highlighted fields.",
     });
-
-    // Reset form
-    reset();
-    setBannerImage("");
   };
 
   return (
@@ -76,7 +123,41 @@ export default function PyqWithSolutionPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={(e) => {
+          e.preventDefault(); // Explicitly prevent default
+          handleSubmit(onSubmit, onError)(e);
+        }}>
+          <div className="mb-4 p-4 border rounded bg-yellow-50">
+            <p className="text-sm font-bold mb-2">Debug Tools</p>
+            <Button 
+              type="button" 
+              variant="secondary"
+              size="sm"
+              onClick={async () => {
+                const samplePayload = {
+                  category: "jee-main",
+                  year: 2026,
+                  title: "Debug Test Paper",
+                  paperDriveLink: "https://drive.google.com/file/d/123456789/view",
+                  solutionDriveLink: "https://drive.google.com/file/d/987654321/view",
+                  thumbnailBase64: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                  videoSolutionLink: "https://youtube.com/watch?v=abcdefg",
+                  displayOrder: 1
+                };
+                console.log("🚀 [Debug] Sending Sample Payload:", samplePayload);
+                toast.info("Sending Debug Payload...");
+                try {
+                  await papersService.createWithSolution(samplePayload as any);
+                  toast.success("Debug Payload Sent Successfully!");
+                } catch (e: any) {
+                  console.error("❌ [Debug] Failed:", e);
+                  toast.error("Debug Send Failed: " + (e.message || "Unknown error"));
+                }
+              }}
+            >
+              Test API with Sample Payload
+            </Button>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>PYQ Details</CardTitle>
@@ -100,14 +181,25 @@ export default function PyqWithSolutionPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="exam">Exam *</Label>
-                  <Input
-                    id="exam"
-                    placeholder="JEE Main"
-                    {...register("exam")}
-                  />
-                  {errors.exam && (
-                    <p className="text-sm text-red-600">{errors.exam.message}</p>
+                  <Label htmlFor="category">Category *</Label>
+                  <Select
+                    onValueChange={(val: any) => setValue("category", val)}
+                    defaultValue={categoryValue}
+                    value={categoryValue}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jee-main">JEE Main</SelectItem>
+                      <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
+                      <SelectItem value="neet">NEET</SelectItem>
+                      <SelectItem value="wbjee">WBJEE</SelectItem>
+                      <SelectItem value="boards">Boards</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.category && (
+                    <p className="text-sm text-red-600">{errors.category.message}</p>
                   )}
                 </div>
               </div>
@@ -159,14 +251,28 @@ export default function PyqWithSolutionPage() {
                       {errors.questionPaperLink.message}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500">
-                    Paste the shareable Google Drive link
-                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="solutionDriveLink">
+                    Solution PDF Link (Google Drive) *
+                  </Label>
+                  <Input
+                    id="solutionDriveLink"
+                    type="url"
+                    placeholder="https://drive.google.com/file/d/..."
+                    {...register("solutionDriveLink")}
+                  />
+                  {errors.solutionDriveLink && (
+                    <p className="text-sm text-red-600">
+                      {errors.solutionDriveLink.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="videoSolutionLink">
-                    Video Solution Link (YouTube) *
+                    Video Solution Link (YouTube) - Optional
                   </Label>
                   <Input
                     id="videoSolutionLink"
@@ -179,9 +285,6 @@ export default function PyqWithSolutionPage() {
                       {errors.videoSolutionLink.message}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500">
-                    Paste the YouTube video URL
-                  </p>
                 </div>
               </div>
 
