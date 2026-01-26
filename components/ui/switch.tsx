@@ -9,7 +9,10 @@ interface SwitchProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
-  ({ className, checked = false, onCheckedChange, disabled, ...props }, ref) => {
+  (
+    { className, checked = false, onCheckedChange, disabled, ...props },
+    ref,
+  ) => {
     const handleClick = () => {
       if (!disabled && onCheckedChange) {
         onCheckedChange(!checked);

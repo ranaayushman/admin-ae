@@ -461,7 +461,8 @@ export default function CounsellingInquiriesPage() {
                     {statusConfig[selectedInquiry.status]?.label}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    Received {formatDistanceToNow(new Date(selectedInquiry.createdAt))}
+                    Received{" "}
+                    {formatDistanceToNow(new Date(selectedInquiry.createdAt))}
                   </span>
                 </div>
               </div>
