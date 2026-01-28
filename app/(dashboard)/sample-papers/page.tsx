@@ -128,8 +128,8 @@ export default function SamplePapersPage() {
     setLoading(true);
     try {
       const [class10, class12] = await Promise.all([
-        papersService.getSamplePapers("10"),
-        papersService.getSamplePapers("12"),
+        papersService.getPapers({ category: "sample-10" }),
+        papersService.getPapers({ category: "sample-12" }),
       ]);
       setPapers10(class10);
       setPapers12(class12);

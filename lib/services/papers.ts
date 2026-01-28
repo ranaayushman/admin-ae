@@ -51,29 +51,22 @@ export interface Paper {
   updatedAt: string;
 }
 
-export interface CreatePaperWithSolutionPayload {
+export interface CreatePaperPayload {
   category: PaperCategory;
   year: number;
   title: string;
   paperDriveLink: string;
-  solutionDriveLink: string;
-  thumbnailBase64?: string;
+  solutionDriveLink?: string;
   videoSolutionLink?: string;
+  thumbnailBase64?: string;
   displayOrder?: number;
   subject?: string;
   board?: BoardName;
 }
 
-export interface CreatePaperNoSolutionPayload {
-  category: PaperCategory;
-  year: number;
-  title: string;
-  paperDriveLink: string;
-  thumbnailBase64?: string;
-  displayOrder?: number;
-  subject?: string;
-  board?: BoardName;
-}
+// Keeping these for backward compatibility if needed, or aliasing them
+export type CreatePaperWithSolutionPayload = CreatePaperPayload;
+export type CreatePaperNoSolutionPayload = CreatePaperPayload;
 
 // Mock data for boards and sample papers (until API is ready)
 const MOCK_PAPERS: Paper[] = [
@@ -153,64 +146,71 @@ const MOCK_PAPERS: Paper[] = [
 ];
 
 export const papersService = {
+  // Create paper with solution
   createWithSolution: async (payload: CreatePaperWithSolutionPayload) => {
-    console.log(
-      "🚀 [papersService] Configured API URL:",
-      process.env.NEXT_PUBLIC_API_URL,
-    );
-    console.log(
-      "🚀 [papersService] POST /papers/with-solution",
-      JSON.stringify(payload, null, 2),
-    );
-    const response: AxiosResponse = await apiClient.post(
-      "/papers/with-solution",
-      payload,
-    );
-    console.log("✅ [papersService] Response:", response.data);
-    return response.data;
+    try {
+      const response: AxiosResponse = await apiClient.post(
+        "/papers", 
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 
+  // Create paper without solution (using the same unified endpoint or specific if backend requires)
+  // Based on user request, it seems they want unified, but let's stick to what we see or standard Rest
+  // The user prompt mentioned "Create Paper (Unified) ... Body: { ... }"
+  // So we will use POST /papers for both
   createNoSolution: async (payload: CreatePaperNoSolutionPayload) => {
-    console.log(
-      "🚀 [papersService] Configured API URL:",
-      process.env.NEXT_PUBLIC_API_URL,
-    );
-    console.log(
-      "🚀 [papersService] POST /papers/no-solution",
-      JSON.stringify(payload, null, 2),
-    );
-    const response: AxiosResponse = await apiClient.post(
-      "/papers/no-solution",
-      payload,
-    );
-    console.log("✅ [papersService] Response:", response.data);
+    try {
+      const response: AxiosResponse = await apiClient.post(
+        "/papers",
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get papers with advanced filtering
+  getPapers: async (params: {
+    category?: PaperCategory;
+    board?: BoardName;
+    subject?: string;
+    year?: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const response = await apiClient.get("/papers", { params });
+    const data = response.data;
+    // Handle both array and paginated response { data: Paper[], total: ... }
+    return Array.isArray(data) ? data : (data.data || []);
+  },
+
+  // Get statistics
+  getStats: async () => {
+    const response = await apiClient.get("/papers/stats");
     return response.data;
   },
 
-  // Get papers by category (mock for now)
-  getPapersByCategory: async (category: PaperCategory): Promise<Paper[]> => {
-    // TODO: Replace with real API call when ready
-    // const response = await apiClient.get(`/papers?category=${category}`);
-    // return response.data.data;
-    return MOCK_PAPERS.filter((p) => p.category === category);
+  // Get papers by board (grouped)
+  getByBoard: async (classLevel: "10" | "12", board: string) => {
+    const response = await apiClient.get(`/papers/boards/${classLevel}/${board}`);
+    return response.data; // Expected: { pyq: [], samplePapers: [], subjects: [] }
   },
 
-  // Get all boards papers (mock for now)
-  getBoardsPapers: async (classLevel: "10" | "12"): Promise<Paper[]> => {
-    const category = classLevel === "10" ? "boards-10" : "boards-12";
-    return MOCK_PAPERS.filter((p) => p.category === category);
+  // Bulk create
+  bulkCreate: async (papers: any[]) => {
+    const response = await apiClient.post("/papers/bulk", { papers });
+    return response.data;
   },
 
-  // Get all sample papers (mock for now)
-  getSamplePapers: async (classLevel: "10" | "12"): Promise<Paper[]> => {
-    const category = classLevel === "10" ? "sample-10" : "sample-12";
-    return MOCK_PAPERS.filter((p) => p.category === category);
-  },
-
-  // Delete paper (mock for now)
+  // Delete paper
   deletePaper: async (paperId: string): Promise<void> => {
-    console.log("🗑️ [papersService] DELETE /papers/" + paperId);
-    // TODO: Replace with real API call when ready
-    // await apiClient.delete(`/papers/${paperId}`);
+    await apiClient.delete(`/papers/${paperId}`);
   },
 };

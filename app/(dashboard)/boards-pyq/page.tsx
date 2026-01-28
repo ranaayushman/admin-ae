@@ -127,8 +127,8 @@ export default function BoardsPyqPage() {
     setLoading(true);
     try {
       const [class10, class12] = await Promise.all([
-        papersService.getBoardsPapers("10"),
-        papersService.getBoardsPapers("12"),
+        papersService.getPapers({ category: "boards-10" }),
+        papersService.getPapers({ category: "boards-12" }),
       ]);
       setPapers10(class10);
       setPapers12(class12);
