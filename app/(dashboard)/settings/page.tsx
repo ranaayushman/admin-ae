@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { 
+  ExternalLink, 
+  ImageIcon, 
+  LayoutTemplate, 
+  Menu, 
+  Share2 
+} from "lucide-react";
 
 export default function SettingsPage() {
   return (
@@ -77,37 +83,73 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Footer Management */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Footer Management</CardTitle>
-            <CardDescription>Manage website footer links and content</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/settings/footer">
-              <Button className="flex items-center gap-2">
-                Manage Footer Links
-                <ExternalLink className="w-4 h-4" />
-              </Button>
+        {/* Site Configuration */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Site Configuration</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            
+            {/* Hero Banners */}
+            <Link href="/settings/hero-banners" className="block h-full">
+              <Card className="hover:bg-accent/50 transition-colors h-full cursor-pointer border-transparent ring-1 ring-border shadow-sm hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <ImageIcon className="h-5 w-5 text-blue-600" />
+                    Hero Banners
+                  </CardTitle>
+                  <CardDescription>
+                    Manage homepage carousel banners
+                  </CardDescription>
+                </CardHeader>
+              </Card>
             </Link>
-          </CardContent>
-        </Card>
 
-        {/* Hero Banners Management */}
-        <Card>
-            <CardHeader>
-                <CardTitle>Hero Banners</CardTitle>
-                <CardDescription>Update the homepage hero slider</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Link href="/settings/hero-banners">
-                    <Button className="flex items-center gap-2">
-                        Manage Hero Banners
-                        <ExternalLink className="w-4 h-4" />
-                    </Button>
-                </Link>
-            </CardContent>
-        </Card>
+            {/* Footer */}
+            <Link href="/settings/footer" className="block h-full">
+              <Card className="hover:bg-accent/50 transition-colors h-full cursor-pointer border-transparent ring-1 ring-border shadow-sm hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <LayoutTemplate className="h-5 w-5 text-indigo-600" />
+                    Footer Links
+                  </CardTitle>
+                  <CardDescription>
+                    Manage footer links and layout
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            {/* Navbar */}
+            <Link href="/settings/navbar" className="block h-full">
+              <Card className="hover:bg-accent/50 transition-colors h-full cursor-pointer border-transparent ring-1 ring-border shadow-sm hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Menu className="h-5 w-5 text-purple-600" />
+                    Navbar Menu
+                  </CardTitle>
+                  <CardDescription>
+                    Configure navigation structure
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            {/* Social Links */}
+            <Link href="/settings/social" className="block h-full">
+              <Card className="hover:bg-accent/50 transition-colors h-full cursor-pointer border-transparent ring-1 ring-border shadow-sm hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Share2 className="h-5 w-5 text-pink-600" />
+                    Social Media
+                  </CardTitle>
+                  <CardDescription>
+                    Update social profile links
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+          </div>
+        </div>
 
         {/* Payment Settings */}
         <Card>
