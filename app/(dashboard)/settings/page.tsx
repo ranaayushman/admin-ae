@@ -93,6 +93,22 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Hero Banners Management */}
+        <Card>
+            <CardHeader>
+                <CardTitle>Hero Banners</CardTitle>
+                <CardDescription>Update the homepage hero slider</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Link href="/settings/hero-banners">
+                    <Button className="flex items-center gap-2">
+                        Manage Hero Banners
+                        <ExternalLink className="w-4 h-4" />
+                    </Button>
+                </Link>
+            </CardContent>
+        </Card>
+
         {/* Payment Settings */}
         <Card>
           <CardHeader>
