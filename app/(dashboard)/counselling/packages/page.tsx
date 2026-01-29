@@ -311,7 +311,7 @@ export default function CounsellingPackagesPage() {
       highlights: pkg.highlights.length > 0 ? pkg.highlights : [""],
       features:
         pkg.features.length > 0
-          ? pkg.features
+          ? pkg.features.map(f => ({ ...f, description: f.description || "" }))
           : [{ title: "", description: "", included: true }],
       badge: pkg.badge || "",
       badgeColor: pkg.badgeColor || "#2596be",
@@ -323,7 +323,7 @@ export default function CounsellingPackagesPage() {
     replaceEditHighlights(pkg.highlights.length > 0 ? pkg.highlights : [""]);
     replaceEditFeatures(
       pkg.features.length > 0
-        ? pkg.features
+        ? pkg.features.map(f => ({ ...f, description: f.description || "" }))
         : [{ title: "", description: "", included: true }],
     );
     setIsEditDialogOpen(true);
