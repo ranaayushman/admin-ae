@@ -46,10 +46,26 @@ export const teamService = {
   createTeamMember: async (
     payload: CreateTeamMemberPayload,
   ): Promise<TeamMember> => {
-    console.log(
-      "🚀 [teamService] POST /team-members",
-      JSON.stringify(payload, null, 2),
-    );
+    // Log payload details (without full base64 to avoid console clutter)
+    const imageInfo = payload.imageBase64
+      ? {
+          hasImage: true,
+          base64Length: payload.imageBase64.length,
+          base64SizeKB: Math.round(payload.imageBase64.length / 1024),
+          base64Prefix: payload.imageBase64.substring(0, 50) + "...",
+          isValidDataUri: payload.imageBase64.startsWith("data:image/"),
+        }
+      : { hasImage: false };
+
+    console.log("🚀 [teamService] POST /team-members", {
+      name: payload.name,
+      title: payload.title,
+      expertise: payload.expertise,
+      displayOrder: payload.displayOrder,
+      isActive: payload.isActive,
+      imageBase64: imageInfo,
+    });
+
     const response: AxiosResponse<TeamMember> = await apiClient.post(
       "/team-members",
       payload,
@@ -101,10 +117,26 @@ export const teamService = {
     id: string,
     payload: UpdateTeamMemberPayload,
   ): Promise<TeamMember> => {
-    console.log(
-      `🚀 [teamService] PATCH /team-members/${id}`,
-      JSON.stringify(payload, null, 2),
-    );
+    // Log payload details (without full base64 to avoid console clutter)
+    const imageInfo = payload.imageBase64
+      ? {
+          hasImage: true,
+          base64Length: payload.imageBase64.length,
+          base64SizeKB: Math.round(payload.imageBase64.length / 1024),
+          base64Prefix: payload.imageBase64.substring(0, 50) + "...",
+          isValidDataUri: payload.imageBase64.startsWith("data:image/"),
+        }
+      : { hasImage: false, note: "No new image - keeping existing" };
+
+    console.log(`🚀 [teamService] PATCH /team-members/${id}`, {
+      name: payload.name,
+      title: payload.title,
+      expertise: payload.expertise,
+      displayOrder: payload.displayOrder,
+      isActive: payload.isActive,
+      imageBase64: imageInfo,
+    });
+
     const response: AxiosResponse<TeamMember> = await apiClient.patch(
       `/team-members/${id}`,
       payload,

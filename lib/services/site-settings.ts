@@ -2,12 +2,32 @@ import apiClient from "@/lib/services/api.client";
 import { AxiosResponse } from "axios";
 
 export interface HeroBanner {
+  _id?: string;
   title: string;
   description: string;
   imageUrl: string;
   ctaUrl: string;
   ctaText: string;
   order: number;
+  isActive: boolean;
+}
+
+export interface CreateHeroBannerPayload {
+  title: string;
+  description: string;
+  imageBase64: string;
+  ctaUrl: string;
+  ctaText: string;
+  isActive: boolean;
+}
+
+export interface CreateHeroBannerResponse {
+  _id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  ctaUrl: string;
+  ctaText: string;
   isActive: boolean;
 }
 
@@ -53,10 +73,20 @@ export interface UpdateSocialLinksPayload {
 }
 
 export const siteSettingsService = {
-  // Update Hero Banners
-  updateHeroBanners: async (payload: UpdateHeroBannersPayload) => {
+  getHeroBanners: async (): Promise<HeroBanner[]> => {
     try {
-      const response: AxiosResponse = await apiClient.patch(
+      const response: AxiosResponse<HeroBanner[]> = await apiClient.get("/site-settings/hero-banners");
+      return response.data;
+    } catch (error) {
+       console.error("Error fetching hero banners:", error);
+       return [];
+    }
+  },
+
+  // Create individual Hero Banner with base64 image
+  createHeroBanner: async (payload: CreateHeroBannerPayload): Promise<CreateHeroBannerResponse> => {
+    try {
+      const response: AxiosResponse<CreateHeroBannerResponse> = await apiClient.post(
         "/site-settings/hero-banners",
         payload
       );
@@ -66,13 +96,12 @@ export const siteSettingsService = {
     }
   },
 
-  getHeroBanners: async (): Promise<UpdateHeroBannersPayload> => {
+  // Delete individual Hero Banner
+  deleteHeroBanner: async (id: string): Promise<void> => {
     try {
-      const response: AxiosResponse = await apiClient.get("/site-settings/hero-banners");
-      return response.data;
+      await apiClient.delete(`/site-settings/hero-banners/${id}`);
     } catch (error) {
-       console.error("Error fetching hero banners:", error);
-       return { heroBanners: [] };
+      throw error;
     }
   },
 

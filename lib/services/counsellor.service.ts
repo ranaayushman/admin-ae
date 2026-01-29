@@ -28,7 +28,7 @@ export const counsellorService = {
       JSON.stringify(payload, null, 2),
     );
     const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
-      await apiClient.post("/counsellors", payload);
+      await apiClient.post("/counselling/counsellors", payload);
     console.log("✅ [counsellorService] Response:", response.data);
     return response.data.data || response.data;
   },
@@ -42,7 +42,7 @@ export const counsellorService = {
   ): Promise<Counsellor[]> => {
     console.log("🚀 [counsellorService] GET /counsellors", params);
     const response: AxiosResponse<CounsellorsResponse | Counsellor[]> =
-      await apiClient.get("/counsellors", { params });
+      await apiClient.get("/counselling/counsellors", { params });
     console.log("✅ [counsellorService] Response:", response.data);
 
     // Handle both { success, data } and direct array responses
@@ -103,6 +103,21 @@ export const counsellorService = {
       isActive: true,
       sort: "displayOrder",
     });
+  },
+
+  /**
+   * Update counsellor rating
+   * PATCH /counsellors/:id/rating
+   */
+  updateCounsellorRating: async (
+    id: string,
+    newRating: number,
+  ): Promise<Counsellor> => {
+    console.log(`🚀 [counsellorService] PATCH /counsellors/${id}/rating`, { newRating });
+    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
+      await apiClient.patch(`/counsellors/${id}/rating`, { newRating });
+    console.log("✅ [counsellorService] Response:", response.data);
+    return response.data.data || response.data;
   },
 };
 

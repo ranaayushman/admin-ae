@@ -1,7 +1,7 @@
 // components/add-pyq/AddPyqForm.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -20,9 +20,31 @@ import { Input } from "../ui/input";
 import { questionService } from "@/lib/services/question.service";
 import { CreateQuestionPayload } from "@/lib/types";
 
+// LocalStorage keys
+const STORAGE_KEY = "pyq-form-metadata";
+
+interface SavedMetadata {
+  subject: string;
+  chapter: string;
+  difficulty?: "easy" | "medium" | "hard";
+}
+
 export function AddPyqForm() {
   const [questionType, setQuestionType] =
     useState<QuestionType>("SINGLE_CORRECT");
+
+  // Load saved metadata from localStorage
+  const loadSavedMetadata = (): SavedMetadata => {
+    if (typeof window === "undefined") return { subject: "", chapter: "" };
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : { subject: "", chapter: "" };
+    } catch {
+      return { subject: "", chapter: "" };
+    }
+  };
+
+  const savedMetadata = loadSavedMetadata();
 
   const {
     register,
@@ -35,13 +57,15 @@ export function AddPyqForm() {
   } = useForm<AddPyqFormValues>({
     resolver: zodResolver(addPyqSchema),
     defaultValues: {
-      subject: "",
-      chapter: "",
-      difficulty: undefined,
+      subject: savedMetadata.subject || "",
+      chapter: savedMetadata.chapter || "",
+      difficulty: savedMetadata.difficulty || undefined,
       question: "",
       solution: "",
       questionType: "SINGLE_CORRECT",
       options: [
+        { id: crypto.randomUUID(), text: "", isCorrect: false },
+        { id: crypto.randomUUID(), text: "", isCorrect: false },
         { id: crypto.randomUUID(), text: "", isCorrect: false },
         { id: crypto.randomUUID(), text: "", isCorrect: false },
       ],
@@ -51,6 +75,24 @@ export function AddPyqForm() {
 
   const questionValue = watch("question");
   const solutionValue = watch("solution");
+  const subject = watch("subject");
+  const chapter = watch("chapter");
+  const difficulty = watch("difficulty");
+
+  // Save metadata to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const metadata: SavedMetadata = {
+        subject: subject || "",
+        chapter: chapter || "",
+        difficulty: difficulty as "easy" | "medium" | "hard" | undefined,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(metadata));
+    } catch (error) {
+      console.error("Failed to save metadata to localStorage:", error);
+    }
+  }, [subject, chapter, difficulty]);
 
   const onSubmit = async (data: AddPyqFormValues) => {
     try {
@@ -112,17 +154,19 @@ export function AddPyqForm() {
         position: "bottom-center",
       });
 
-      // Reset form after successful submission
+      // Reset form after successful submission, but keep metadata
       reset({
-        subject: "",
-        chapter: "",
-        difficulty: undefined,
+        subject: subject || "",
+        chapter: chapter || "",
+        difficulty: difficulty as any,
         question: "",
         solution: "",
         questionType,
         options:
           questionType === "SINGLE_CORRECT" || questionType === "MULTI_CORRECT"
             ? [
+                { id: crypto.randomUUID(), text: "", isCorrect: false },
+                { id: crypto.randomUUID(), text: "", isCorrect: false },
                 { id: crypto.randomUUID(), text: "", isCorrect: false },
                 { id: crypto.randomUUID(), text: "", isCorrect: false },
               ]

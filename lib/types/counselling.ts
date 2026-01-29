@@ -240,3 +240,106 @@ export interface EnrollmentsResponse {
     limit: number;
   };
 }
+
+// Session
+export interface CounsellingSession {
+  _id: string;
+  userId: string;
+  user?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  counsellorId: string;
+  counsellor?: Counsellor;
+  enrollmentId?: string;
+  enrollment?: CounsellingEnrollment;
+  paymentId?: string; // For direct booking
+  amountPaid?: number;
+  preferredDate: string;
+  preferredTimeSlot: string;
+  scheduledAt?: string;
+  status: "scheduled" | "completed" | "cancelled" | "no-show";
+  agenda?: string;
+  meetingPreference?: string;
+  meetingLink?: string;
+  meetingPlatform?: string;
+  notes?: string;
+  nextSteps?: string;
+  cancelReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSessionPayload {
+  enrollmentId?: string;
+  counsellorId?: string;
+  paymentId?: string;
+  amountPaid?: number;
+  preferredDate: string;
+  preferredTimeSlot: string;
+  agenda?: string;
+  meetingPreference?: string;
+}
+
+export interface UpdateSessionStatusPayload {
+  status: "completed" | "cancelled" | "no-show" | "scheduled";
+  notes?: string;
+  nextSteps?: string;
+}
+
+export interface CancelSessionPayload {
+  reason: string;
+  reschedule?: boolean;
+}
+
+// Review
+export interface CounsellingReview {
+  _id: string;
+  userId: string;
+  user?: {
+    name: string;
+    email: string;
+  };
+  sessionId: string;
+  session?: CounsellingSession;
+  counsellorId: string;
+  counsellor?: Counsellor;
+  rating: number; // 1-5
+  review?: string;
+  wouldRecommend?: boolean;
+  tags?: string[];
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateReviewPayload {
+  sessionId: string;
+  counsellorId: string;
+  rating: number;
+  review?: string;
+  wouldRecommend?: boolean;
+  tags?: string[];
+}
+
+// Additional Response Types
+export interface SessionsResponse {
+  success: boolean;
+  data: CounsellingSession[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface ReviewsResponse {
+  success: boolean;
+  data: CounsellingReview[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+}

@@ -90,8 +90,8 @@ const packageSchema = z.object({
   highlights: z.array(z.string()),
   features: z.array(
     z.object({
-      title: z.string(),
-      description: z.string().optional(),
+      title: z.string().min(1, "Feature title is required"),
+      description: z.string().min(1, "Feature description is required"),
       included: z.boolean(),
     }),
   ),
@@ -268,9 +268,12 @@ export default function CounsellingPackagesPage() {
 
       const payload: CreateCounsellingPackagePayload = {
         ...data,
+        currency: "INR", // Required by API
         highlights: data.highlights.filter((h) => h.trim() !== ""),
         features: data.features.filter((f) => f.title.trim() !== ""),
       };
+
+      console.log("📤 Payload being sent:", JSON.stringify(payload, null, 2));
 
       const newPackage = await counsellingService.createPackage(payload);
 
@@ -283,6 +286,7 @@ export default function CounsellingPackagesPage() {
       fetchPackages();
     } catch (error: any) {
       console.error("Failed to create package:", error);
+      console.error("❌ Error response:", error.response?.data);
       toast.error("Failed to create package", {
         description: error.response?.data?.message || error.message,
       });
@@ -631,31 +635,40 @@ export default function CounsellingPackagesPage() {
                 </Button>
               </div>
 
-              {/* Features */}
               <div className="space-y-2">
                 <Label>Features</Label>
                 {featureFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-2 items-center">
-                    <Input
-                      {...register(`features.${index}.title` as const)}
-                      placeholder="Feature title"
-                      className="flex-1"
-                    />
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        {...register(`features.${index}.included` as const)}
-                      />
-                      Included
-                    </label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeFeature(index)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                  <div key={field.id} className="border p-3 rounded-md space-y-2">
+                    <div className="flex gap-2 items-start">
+                      <div className="flex-1 space-y-2">
+                        <Input
+                          {...register(`features.${index}.title` as const)}
+                          placeholder="Feature title (e.g., 1-on-1 Calls)"
+                        />
+                        <Textarea
+                          {...register(`features.${index}.description` as const)}
+                          placeholder="Feature description (e.g., Weekly personalized calls)"
+                          rows={2}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            {...register(`features.${index}.included` as const)}
+                          />
+                          Included
+                        </label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeFeature(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
                 <Button
