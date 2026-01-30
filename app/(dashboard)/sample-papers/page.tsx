@@ -41,6 +41,7 @@ import {
   GraduationCap,
   BookOpen,
   Sparkles,
+  Pencil,
 } from "lucide-react";
 import {
   papersService,
@@ -99,6 +100,8 @@ export default function SamplePapersPage() {
   const [papers12, setPapers12] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPaper, setEditingPaper] = useState<Paper | null>(null);
   const [selectedClass, setSelectedClass] = useState<"10" | "12">("10");
 
   const {
@@ -124,15 +127,31 @@ export default function SamplePapersPage() {
     fetchPapers();
   }, []);
 
+  // Populate form when editing paper
+  useEffect(() => {
+    if (editingPaper) {
+      reset({
+        category: editingPaper.category as "sample-10" | "sample-12",
+        board: editingPaper.board,
+        subject: editingPaper.subject,
+        year: editingPaper.year,
+        title: editingPaper.title,
+        paperDriveLink: editingPaper.paperDriveLink,
+        solutionDriveLink: editingPaper.solutionDriveLink || "",
+        videoSolutionLink: editingPaper.videoSolutionLink || "",
+        displayOrder: editingPaper.displayOrder,
+      });
+    }
+  }, [editingPaper, reset]);
+
   const fetchPapers = async () => {
     setLoading(true);
     try {
-      const [class10, class12] = await Promise.all([
-        papersService.getPapers({ category: "sample-10" }),
-        papersService.getPapers({ category: "sample-12" }),
-      ]);
-      setPapers10(class10);
-      setPapers12(class12);
+      const papers10Data = await papersService.getPapers({ category: "sample-10" });
+      const papers12Data = await papersService.getPapers({ category: "sample-12" });
+
+      setPapers10(papers10Data);
+      setPapers12(papers12Data);
     } catch (error) {
       console.error("Failed to fetch papers:", error);
       toast.error("Failed to load papers");
@@ -183,6 +202,38 @@ export default function SamplePapersPage() {
       fetchPapers();
     } catch (error) {
       toast.error("Failed to delete paper");
+    }
+  };
+
+  const handleEdit = (paper: Paper) => {
+    setEditingPaper(paper);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (data: FormValues) => {
+    if (!editingPaper) return;
+
+    try {
+      const payload = {
+        category: data.category as PaperCategory,
+        year: data.year,
+        title: data.title,
+        paperDriveLink: data.paperDriveLink,
+        solutionDriveLink: data.solutionDriveLink || undefined,
+        videoSolutionLink: data.videoSolutionLink || undefined,
+        subject: data.subject,
+        board: data.board as BoardName,
+        displayOrder: data.displayOrder,
+      };
+
+      await papersService.updatePaper(editingPaper._id, payload);
+      toast.success("Sample paper updated successfully!");
+      setEditDialogOpen(false);
+      setEditingPaper(null);
+      fetchPapers();
+    } catch (error: any) {
+      console.error("Failed to update paper:", error);
+      toast.error(error?.message || "Failed to update paper");
     }
   };
 
@@ -386,6 +437,191 @@ export default function SamplePapersPage() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Edit Dialog */}
+          <Dialog open={editDialogOpen} onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) {
+              setEditingPaper(null);
+              reset();
+            }
+          }}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Sample Paper</DialogTitle>
+              </DialogHeader>
+
+              <form
+                onSubmit={handleSubmit(handleEditSubmit)}
+                className="space-y-4 mt-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Class/Category */}
+                  <div className="space-y-2">
+                    <Label>Class *</Label>
+                    <Select
+                      value={watchCategory}
+                      onValueChange={(val) =>
+                        setValue("category", val as "sample-10" | "sample-12")
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sample-10">Class 10</SelectItem>
+                        <SelectItem value="sample-12">Class 12</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Board */}
+                  <div className="space-y-2">
+                    <Label>Board *</Label>
+                    <Select 
+                      value={watch("board")}
+                      onValueChange={(val) => setValue("board", val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select board" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BOARDS.map((board) => (
+                          <SelectItem key={board} value={board}>
+                            {board}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.board && (
+                      <p className="text-sm text-destructive">
+                        {errors.board.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Subject */}
+                  <div className="space-y-2">
+                    <Label>Subject *</Label>
+                    <Select 
+                      value={watch("subject")}
+                      onValueChange={(val) => setValue("subject", val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.subject && (
+                      <p className="text-sm text-destructive">
+                        {errors.subject.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Year */}
+                  <div className="space-y-2">
+                    <Label>Year *</Label>
+                    <Input
+                      type="number"
+                      placeholder="2026"
+                      {...register("year", { valueAsNumber: true })}
+                    />
+                    {errors.year && (
+                      <p className="text-sm text-destructive">
+                        {errors.year.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div className="space-y-2">
+                  <Label>Title *</Label>
+                  <Input
+                    placeholder="CBSE Class 10 Mathematics Sample Paper 2026"
+                    {...register("title")}
+                  />
+                  {errors.title && (
+                    <p className="text-sm text-destructive">
+                      {errors.title.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Paper Drive Link */}
+                <div className="space-y-2">
+                  <Label>Paper Google Drive Link *</Label>
+                  <Input
+                    placeholder="https://drive.google.com/file/d/..."
+                    {...register("paperDriveLink")}
+                  />
+                  {errors.paperDriveLink && (
+                    <p className="text-sm text-destructive">
+                      {errors.paperDriveLink.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Solution Drive Link */}
+                <div className="space-y-2">
+                  <Label>Solution/Marking Scheme Link (optional)</Label>
+                  <Input
+                    placeholder="https://drive.google.com/file/d/..."
+                    {...register("solutionDriveLink")}
+                  />
+                  {errors.solutionDriveLink && (
+                    <p className="text-sm text-destructive">
+                      {errors.solutionDriveLink.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Video Solution Link */}
+                <div className="space-y-2">
+                  <Label>Video Solution Link (optional)</Label>
+                  <Input
+                    placeholder="https://youtube.com/watch?v=..."
+                    {...register("videoSolutionLink")}
+                  />
+                  {errors.videoSolutionLink && (
+                    <p className="text-sm text-destructive">
+                      {errors.videoSolutionLink.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Display Order */}
+                <div className="space-y-2">
+                  <Label>Display Order</Label>
+                  <Input
+                    type="number"
+                    placeholder="1"
+                    {...register("displayOrder", { valueAsNumber: true })}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Updating..." : "Update Sample Paper"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
 
         <CardContent>
@@ -467,13 +703,22 @@ export default function SamplePapersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(paper._id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(paper)}
+                            >
+                              <Pencil className="w-4 h-4 text-primary" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(paper._id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

@@ -15,9 +15,9 @@ export const pyqWithSolutionSchema = z.object({
   questionPaperLink: z.string().url("Must be a valid URL"),
   videoSolutionLink: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   solutionDriveLink: z.string().url("Must be a valid URL"),
-  bannerImage: z.string().min(1, "Banner image is required"),
+  bannerImage: z.string().optional().or(z.literal("")), // Made optional for edit mode
   displayOrder: z.number(),
-  isActive: z.boolean(),
+  isActive: z.boolean().optional(), // Made optional
 });
 
 export type PyqWithSolutionFormValues = z.infer<typeof pyqWithSolutionSchema>;
@@ -27,9 +27,9 @@ export const pyqWithoutSolutionSchema = z.object({
   category: categoryEnum,
   year: z.number().min(1900, "Year must be valid").max(new Date().getFullYear() + 1),
   questionPaperLink: z.string().url("Must be a valid URL"),
-  bannerImage: z.string().min(1, "Banner image is required"),
+  bannerImage: z.string().optional().or(z.literal("")), // Made optional for edit mode
   displayOrder: z.number(),
-  isActive: z.boolean(),
+  isActive: z.boolean().optional(), // Made optional
 });
 
 export type PyqWithoutSolutionFormValues = z.infer<typeof pyqWithoutSolutionSchema>;

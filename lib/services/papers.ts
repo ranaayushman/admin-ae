@@ -191,6 +191,22 @@ export const papersService = {
     return Array.isArray(data) ? data : (data.data || []);
   },
 
+  // Update paper (PATCH /papers/:id)
+  updatePaper: async (
+    paperId: string,
+    data: Partial<CreatePaperPayload>
+  ): Promise<Paper> => {
+    try {
+      const response: AxiosResponse = await apiClient.patch(
+        `/papers/${paperId}`,
+        data
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // Get statistics
   getStats: async () => {
     const response = await apiClient.get("/papers/stats");
