@@ -224,6 +224,20 @@ export const counsellingService = {
   },
 
   /**
+   * Get current user's enrollments (user-facing)
+   * GET /counselling/enrollments/my
+   */
+  getMyEnrollments: async (): Promise<CounsellingEnrollment[]> => {
+    console.log("🚀 [counsellingService] GET /counselling/enrollments/my");
+    const response: AxiosResponse<{
+      success: boolean;
+      data: CounsellingEnrollment[];
+    }> = await apiClient.get("/counselling/enrollments/my");
+    console.log("✅ [counsellingService] Response:", response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
    * Assign counsellor to enrollment
    * PATCH /counselling/enrollments/:id/assign-counsellor
    */
