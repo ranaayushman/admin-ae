@@ -38,6 +38,11 @@ const navItems = [
     icon: HeartHandshake,
     path: "/counselling/packages",
   },
+  {
+    name: "Manage Counselling",
+    icon: ListChecks,
+    path: "/counselling/sessions",
+  },
   { name: "Counsellors", icon: UserCheck, path: "/counselling/counsellors" },
   {
     name: "Counselling Inquiries",

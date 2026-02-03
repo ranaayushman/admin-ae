@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -112,6 +113,7 @@ const examTypeLabels: Record<ExamType, string> = {
 };
 
 export default function CounsellingPackagesPage() {
+  const router = useRouter();
   const [packages, setPackages] = useState<CounsellingPackage[]>([]);
   const [counsellors, setCounsellors] = useState<Counsellor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -788,6 +790,14 @@ export default function CounsellingPackagesPage() {
                   <CardTitle className="text-lg">{pkg.name}</CardTitle>
                 </div>
                 <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mr-2"
+                    onClick={() => router.push(`/counselling/packages/${pkg._id}`)}
+                  >
+                    Manage
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"

@@ -1,20 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  counsellingService,
-} from "@/lib/services/counselling.service";
+import { counsellingService } from "@/lib/services/counselling.service";
+import { counsellorService } from "@/lib/services/counsellor.service";
+import { CounsellingSession, CounsellingEnrollment, Counsellor } from "@/lib/types/counselling";
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -26,7 +24,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -39,6 +36,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -46,173 +49,226 @@ import {
   Video,
   Calendar,
   Clock,
-  User,
   CheckCircle,
   XCircle,
   AlertCircle,
   Link as LinkIcon,
-  Eye,
+  UserPlus,
+  RefreshCcw,
 } from "lucide-react";
 
-// Simple time ago formatter
-function formatDistanceToNow(date: Date | string): string {
-  const now = new Date();
-  const past = new Date(date);
-  const diffMs = now.getTime() - past.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
-}
-
+// Status configuration
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+  pending_assignment: { label: "Pending Assignment", color: "bg-yellow-500", icon: Clock },
   scheduled: { label: "Scheduled", color: "bg-blue-500", icon: Calendar },
+  confirmed: { label: "Confirmed", color: "bg-indigo-500", icon: CheckCircle },
   completed: { label: "Completed", color: "bg-green-500", icon: CheckCircle },
   cancelled: { label: "Cancelled", color: "bg-red-500", icon: XCircle },
   "no-show": { label: "No Show", color: "bg-orange-500", icon: AlertCircle },
 };
 
-interface Session {
-  _id: string;
-  userId: string;
-  user?: {
-    name: string;
-    email: string;
-    phone: string;
-  };
-  counsellorId: string;
-  counsellor?: {
-    _id: string;
-    name: string;
-    email: string;
-  };
-  enrollmentId?: string;
-  preferredDate: string;
-  preferredTimeSlot: string;
-  status: "scheduled" | "completed" | "cancelled" | "no-show";
-  meetingLink?: string;
-  meetingPlatform?: string;
-  agenda?: string;
-  notes?: string;
-  nextSteps?: string;
-  createdAt: string;
-}
+const timeSlots = [
+  "09:00-09:30",
+  "09:30-10:00",
+  "10:00-10:30",
+  "10:30-11:00",
+  "11:00-11:30",
+  "11:30-12:00",
+  "12:00-12:30",
+  "12:30-13:00",
+  "14:00-14:30",
+  "14:30-15:00",
+  "15:00-15:30",
+  "15:30-16:00",
+  "16:00-16:30",
+  "16:30-17:00",
+  "17:00-17:30",
+  "17:30-18:00",
+  "18:00-18:30",
+];
 
-export default function CounsellingSessionsPage() {
-  const [sessions, setSessions] = useState<Session[]>([]);
+export default function CounsellingDashboard() {
+  const [sessions, setSessions] = useState<CounsellingSession[]>([]);
+  const [enrollments, setEnrollments] = useState<CounsellingEnrollment[]>([]);
+  const [counsellors, setCounsellors] = useState<Counsellor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Filters
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("requests");
 
   // Dialog states
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<CounsellingSession | null>(null);
+  const [selectedEnrollment, setSelectedEnrollment] = useState<CounsellingEnrollment | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isEnrollmentAssignDialogOpen, setIsEnrollmentAssignDialogOpen] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
-
+  const [isRescheduleDialogOpen, setIsRescheduleDialogOpen] = useState(false);
+  
   // Form states
   const [meetingLink, setMeetingLink] = useState("");
-  const [meetingPlatform, setMeetingPlatform] = useState("");
-  const [notes, setNotes] = useState("");
-  const [nextSteps, setNextSteps] = useState("");
-  const [newStatus, setNewStatus] = useState("");
+  const [selectedCounsellorId, setSelectedCounsellorId] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [rescheduleData, setRescheduleData] = useState({
+    preferredDate: "",
+    preferredTimeSlot: ""
+  });
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
-  // Fetch sessions
-  const fetchSessions = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsRefreshing(true);
-      // Note: This endpoint doesn't exist yet in the service, using placeholder
-      const response = await counsellingService.getMySessions({
-        status: filterStatus !== "all" ? filterStatus : undefined,
-      });
-      setSessions(response || []);
+      const [sessionsRes, enrollmentsRes, counsellorsRes] = await Promise.all([
+        counsellingService.getAllSessions(),
+        counsellingService.getEnrollments({ status: "active" }),
+        counsellorService.getCounsellors({ isActive: true })
+      ]);
+      
+      setSessions(sessionsRes || []);
+      setEnrollments(enrollmentsRes.data || []);
+      setCounsellors(counsellorsRes || []);
     } catch (error: any) {
-      console.error("Failed to fetch sessions:", error);
-      toast.error("Failed to load sessions", {
-        description: error.message || "Please try again",
-      });
+      console.error("Failed to fetch data:", error);
+      toast.error("Failed to load dashboard data");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [filterStatus]);
+  }, []);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleView = (session: Session) => {
-    setSelectedSession(session);
-    setIsViewDialogOpen(true);
+  // --- Helpers for Safe Access ---
+  const getUserName = (session: CounsellingSession) => {
+    if (typeof session.userId === 'object' && session.userId !== null) {
+      return (session.userId as any).name || "Unknown";
+    }
+    return "Unknown User";
   };
 
-  const handleOpenStatusDialog = (session: Session) => {
-    setSelectedSession(session);
-    setNotes(session.notes || "");
-    setNextSteps(session.nextSteps || "");
-    setNewStatus(session.status);
-    setIsStatusDialogOpen(true);
+  const getUserEmail = (session: CounsellingSession) => {
+    if (typeof session.userId === 'object' && session.userId !== null) {
+      return (session.userId as any).email || "";
+    }
+    return "";
   };
 
-  const handleOpenLinkDialog = (session: Session) => {
+  // --- Handlers ---
+
+  const handleOpenAssign = (session: CounsellingSession) => {
     setSelectedSession(session);
-    setMeetingLink(session.meetingLink || "");
-    setMeetingPlatform(session.meetingPlatform || "zoom");
-    setIsLinkDialogOpen(true);
+    setSelectedCounsellorId(session.counsellorId || "");
+    setIsAssignDialogOpen(true);
   };
 
-  const handleUpdateStatus = async () => {
-    if (!selectedSession) return;
-
+  const handleAssignCounsellor = async () => {
+    if (!selectedSession || !selectedCounsellorId) return;
     try {
       setIsUpdating(true);
-      await counsellingService.updateSessionStatus(selectedSession._id, {
-        status: newStatus,
-        notes,
-        nextSteps,
-      });
-
-      toast.success("Session updated", {
-        description: `Status changed to ${statusConfig[newStatus].label}`,
-      });
-
-      fetchSessions();
-      setIsStatusDialogOpen(false);
+      await counsellingService.assignSessionCounsellor(selectedSession._id, selectedCounsellorId);
+      toast.success("Counsellor assigned successfully");
+      fetchData();
+      setIsAssignDialogOpen(false);
     } catch (error: any) {
-      toast.error("Failed to update session", {
-        description: error.response?.data?.message || error.message,
-      });
+      toast.error(error.message || "Failed to assign counsellor");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  
+  const handleOpenEnrollmentAssign = (enrollment: CounsellingEnrollment) => {
+    setSelectedEnrollment(enrollment);
+    setSelectedCounsellorId(enrollment.assignedCounsellor?._id || "");
+    setIsEnrollmentAssignDialogOpen(true);
+  };
+
+  const handleAssignEnrollmentCounsellor = async () => {
+    if (!selectedEnrollment || !selectedCounsellorId) return;
+     try {
+      setIsUpdating(true);
+      await counsellingService.assignCounsellor(selectedEnrollment._id, selectedCounsellorId);
+      toast.success("Counsellor assigned to student");
+      fetchData();
+      setIsEnrollmentAssignDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to assign counsellor");
     } finally {
       setIsUpdating(false);
     }
   };
 
+  const handleOpenLinkDialog = (session: CounsellingSession) => {
+    setSelectedSession(session);
+    setMeetingLink(session.meetingLink || "");
+    setIsLinkDialogOpen(true);
+  };
+
   const handleAddMeetingLink = async () => {
     if (!selectedSession) return;
-
     try {
       setIsUpdating(true);
+      const safeCounsellorId = selectedSession.counsellorId && typeof selectedSession.counsellorId === 'object' 
+        ? (selectedSession.counsellorId as any)._id 
+        : selectedSession.counsellorId;
+
       await counsellingService.addMeetingLink(selectedSession._id, {
         meetingLink,
-        meetingPlatform,
+        meetingPlatform: "google_meet", // Default or add selector if needed
+        counsellorId: safeCounsellorId || undefined // Include if known
       });
-
-      toast.success("Meeting link added", {
-        description: "Session updated successfully",
-      });
-
-      fetchSessions();
+      toast.success("Link added & Session Confirmed");
+      fetchData();
       setIsLinkDialogOpen(false);
     } catch (error: any) {
-      toast.error("Failed to add meeting link", {
-        description: error.response?.data?.message || error.message,
-      });
+      toast.error(error.message || "Failed to add link");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleOpenReschedule = (session: CounsellingSession) => {
+    setSelectedSession(session);
+    setRescheduleData({
+      preferredDate: session.scheduledDate ? new Date(session.scheduledDate).toISOString().split('T')[0] : session.preferredDate,
+      preferredTimeSlot: session.preferredTimeSlot
+    });
+    setIsRescheduleDialogOpen(true);
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedSession) return;
+    try {
+      setIsUpdating(true);
+      await counsellingService.rescheduleSession(selectedSession._id, rescheduleData);
+      toast.success("Session rescheduled successfully");
+      fetchData();
+      setIsRescheduleDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reschedule session");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+
+
+  const handleOpenCancel = (session: CounsellingSession) => {
+    setSelectedSession(session);
+    setCancelReason("");
+    setIsCancelDialogOpen(true);
+  };
+
+  const handleAdminCancel = async () => {
+    if (!selectedSession || !cancelReason.trim()) return;
+    try {
+      setIsUpdating(true);
+      await counsellingService.adminCancelSession(selectedSession._id, { reason: cancelReason });
+      toast.success("Session cancelled successfully");
+      fetchData();
+      setIsCancelDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to cancel session");
     } finally {
       setIsUpdating(false);
     }
@@ -228,338 +284,267 @@ export default function CounsellingSessionsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Counselling Sessions</h1>
-          <p className="text-muted-foreground">
-            Manage all counselling sessions
-          </p>
+          <h1 className="text-3xl font-bold">Manage Counselling</h1>
+          <p className="text-muted-foreground">Overview of students and session requests</p>
         </div>
-        <Button
-          variant="outline"
-          onClick={fetchSessions}
-          disabled={isRefreshing}
-        >
-          <RefreshCw
-            className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
-          />
+        <Button variant="outline" onClick={fetchData} disabled={isRefreshing}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
+      
+      <Tabs defaultValue="requests" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2 max-w-[400px] mb-8">
+          <TabsTrigger value="requests">Counselling Requests ({sessions.length})</TabsTrigger>
+          <TabsTrigger value="students">Enrolled Students ({enrollments.length})</TabsTrigger>
+        </TabsList>
 
-      {/* Filters */}
-      <div className="flex gap-4 mb-6">
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="scheduled">Scheduled</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="no-show">No Show</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Sessions Table */}
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Counsellor</TableHead>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Meeting Link</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sessions.map((session) => {
-              const StatusIcon = statusConfig[session.status]?.icon || Clock;
-              return (
-                <TableRow key={session._id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{session.user?.name || "N/A"}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {session.user?.email || ""}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">
-                      {session.counsellor?.name || "Not assigned"}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(session.preferredDate).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {session.preferredTimeSlot}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`${statusConfig[session.status]?.color} text-white`}
-                    >
-                      <StatusIcon className="w-3 h-3 mr-1" />
-                      {statusConfig[session.status]?.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {session.meetingLink ? (
-                      <a
-                        href={session.meetingLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline text-sm flex items-center gap-1"
-                      >
-                        <Video className="w-3 h-3" />
-                        {session.meetingPlatform || "Link"}
-                      </a>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenLinkDialog(session)}
-                      >
-                        <LinkIcon className="w-3 h-3 mr-1" />
-                        Add Link
-                      </Button>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleView(session)}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenStatusDialog(session)}
-                      >
-                        Update
-                      </Button>
-                    </div>
-                  </TableCell>
+        <TabsContent value="requests">
+          <Card>
+            <CardHeader>
+              <CardTitle>Session Requests</CardTitle>
+              <CardDescription>Upcoming sessions requiring assignment or confirmation.</CardDescription>
+            </CardHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                   <TableHead>Student</TableHead>
+                   <TableHead>Scheduled Date</TableHead>
+                   <TableHead>Counsellor</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead>Link</TableHead>
+                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              </TableHeader>
+              <TableBody>
+                {sessions.map((session) => {
+                  // Fallback for missing status config
+                  const config = statusConfig[session.status] || { icon: Clock, color: "bg-gray-500", label: session.status };
+                  const StatusIcon = config.icon;
+                  
+                  return (
+                    <TableRow key={session._id}>
+                      <TableCell>
+                        <div className="font-medium">{getUserName(session)}</div>
+                        <div className="text-xs text-muted-foreground">{getUserEmail(session)}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                           <Calendar className="w-4 h-4 text-muted-foreground" />
+                           {new Date(session.scheduledDate || session.preferredDate).toLocaleString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                         {session.counsellor ? (
+                            <span className="font-medium">{session.counsellor.name}</span>
+                         ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleOpenAssign(session)}>
+                              <UserPlus className="w-3 h-3 mr-1" /> Assign
+                            </Button>
+                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${config.color} text-white`}>
+                          <StatusIcon className="w-3 h-3 mr-1" /> {config.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {session.meetingLink ? (
+                           <a href={session.meetingLink} target="_blank" className="text-blue-600 flex items-center gap-1 hover:underline">
+                              <Video className="w-3 h-3" /> Join
+                           </a>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                         <div className="flex justify-end gap-2">
+                           {/* Reschedule button for all non-completed sessions */}
+                           {!['completed', 'cancelled'].includes(session.status) && (
+                               <>
+                               <Button variant="ghost" size="sm" onClick={() => handleOpenReschedule(session)}>
+                                 <RefreshCcw className="w-4 h-4" />
+                               </Button>
+                               <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleOpenCancel(session)}>
+                                  <XCircle className="w-4 h-4" />
+                               </Button>
+                               </>
+                           )}
+                           
+                            {(session.status === 'scheduled' || session.status === 'pending_assignment' || session.status === 'confirmed') && (
+                                <Button variant="ghost" size="sm" onClick={() => handleOpenLinkDialog(session)}>
+                                  <LinkIcon className="w-4 h-4" />
+                                </Button>
+                            )}
+                            {session.counsellor && (
+                                <Button variant="ghost" size="sm" onClick={() => handleOpenAssign(session)}>
+                                   Change
+                                </Button>
+                            )}
+                         </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {sessions.length === 0 && (
+                  <TableRow><TableCell colSpan={6} className="text-center py-8">No session requests found</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
 
-        {sessions.length === 0 && (
-          <div className="p-8 text-center">
-            <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No sessions found</h3>
-            <p className="text-muted-foreground">
-              {filterStatus !== "all"
-                ? "Try adjusting your filters"
-                : "No counselling sessions yet"}
-            </p>
-          </div>
-        )}
-      </Card>
-
-      {/* View Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Session Details</DialogTitle>
-          </DialogHeader>
-
-          {selectedSession && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Student</Label>
-                  <p className="font-medium">{selectedSession.user?.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedSession.user?.email}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Counsellor</Label>
-                  <p className="font-medium">
-                    {selectedSession.counsellor?.name || "Not assigned"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Date</Label>
-                  <p className="font-medium">
-                    {new Date(selectedSession.preferredDate).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Time Slot</Label>
-                  <p className="font-medium">{selectedSession.preferredTimeSlot}</p>
-                </div>
-              </div>
-
-              {selectedSession.agenda && (
-                <div>
-                  <Label className="text-muted-foreground">Agenda</Label>
-                  <p className="text-sm mt-1">{selectedSession.agenda}</p>
-                </div>
-              )}
-
-              {selectedSession.notes && (
-                <div>
-                  <Label className="text-muted-foreground">Notes</Label>
-                  <p className="text-sm mt-1">{selectedSession.notes}</p>
-                </div>
-              )}
-
-              {selectedSession.nextSteps && (
-                <div>
-                  <Label className="text-muted-foreground">Next Steps</Label>
-                  <p className="text-sm mt-1">{selectedSession.nextSteps}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Update Status Dialog */}
-      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <TabsContent value="students">
+           <Card>
+            <CardHeader>
+              <CardTitle>Total Enrolled Students</CardTitle>
+              <CardDescription>All students currently enrolled in counselling packages.</CardDescription>
+            </CardHeader>
+             <Table>
+              <TableHeader>
+                <TableRow>
+                   <TableHead>Student</TableHead>
+                   <TableHead>Package</TableHead>
+                   <TableHead>Assigned Counsellor</TableHead>
+                   <TableHead>Sessions (Used/Rem)</TableHead>
+                   <TableHead className="text-right">Ordered On</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {enrollments.map((enrollment) => (
+                   <TableRow key={enrollment._id}>
+                      <TableCell>
+                         <div className="font-medium">{enrollment.user?.name || "N/A"}</div>
+                         <div className="text-xs text-muted-foreground">{enrollment.user?.email}</div>
+                      </TableCell>
+                      <TableCell>{enrollment.package?.name || "Premium Package"}</TableCell>
+                      <TableCell>
+                          {enrollment.assignedCounsellor ? (
+                             <div className="flex items-center gap-2">
+                               <span>{enrollment.assignedCounsellor.name}</span>
+                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleOpenEnrollmentAssign(enrollment)}>
+                                  <RefreshCw className="w-3 h-3" />
+                               </Button>
+                             </div>
+                          ) : (
+                             <Button variant="outline" size="sm" onClick={() => handleOpenEnrollmentAssign(enrollment)}>Assign</Button>
+                          )}
+                      </TableCell>
+                       <TableCell>{enrollment.sessionsUsed} / {enrollment.sessionsUsed + enrollment.sessionsRemaining}</TableCell>
+                       <TableCell className="text-right">{new Date(enrollment.createdAt).toLocaleDateString()}</TableCell>
+                   </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+           </Card>
+        </TabsContent>
+      </Tabs>
+      
+      {/* Assign Session Counsellor Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Session Status</DialogTitle>
-            <DialogDescription>
-              Update the session status and add notes
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="no-show">No Show</SelectItem>
-                </SelectContent>
+           <DialogHeader><DialogTitle>Assign Counsellor to Session</DialogTitle></DialogHeader>
+           <div className="space-y-4">
+              <Label>Select Counsellor</Label>
+              <Select value={selectedCounsellorId} onValueChange={setSelectedCounsellorId}>
+                 <SelectTrigger><SelectValue placeholder="Choose..." /></SelectTrigger>
+                 <SelectContent>
+                    {counsellors.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add session notes..."
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="nextSteps">Next Steps</Label>
-              <Textarea
-                id="nextSteps"
-                value={nextSteps}
-                onChange={(e) => setNextSteps(e.target.value)}
-                placeholder="Add next steps..."
-                rows={2}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsStatusDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateStatus} disabled={isUpdating}>
-              {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Update
-            </Button>
-          </DialogFooter>
+           </div>
+           <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAssignCounsellor} disabled={isUpdating}>{isUpdating && <Loader2 className="animate-spin w-4 h-4 mr-2" />} Assign</Button>
+           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Add Meeting Link Dialog */}
-      <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
+      
+      {/* Assign Enrollment Counsellor Dialog */}
+      <Dialog open={isEnrollmentAssignDialogOpen} onOpenChange={setIsEnrollmentAssignDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Meeting Link</DialogTitle>
-            <DialogDescription>
-              Provide the meeting link for this session
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="meetingLink">Meeting Link</Label>
-              <Input
-                id="meetingLink"
-                type="url"
-                value={meetingLink}
-                onChange={(e) => setMeetingLink(e.target.value)}
-                placeholder="https://zoom.us/j/123456789"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="platform">Platform</Label>
-              <Select value={meetingPlatform} onValueChange={setMeetingPlatform}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="zoom">Zoom</SelectItem>
-                  <SelectItem value="google-meet">Google Meet</SelectItem>
-                  <SelectItem value="microsoft-teams">Microsoft Teams</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
+           <DialogHeader><DialogTitle>Assign Counsellor to Student</DialogTitle></DialogHeader>
+           <div className="space-y-4">
+              <Label>Select Counsellor</Label>
+              <Select value={selectedCounsellorId} onValueChange={setSelectedCounsellorId}>
+                 <SelectTrigger><SelectValue placeholder="Choose..." /></SelectTrigger>
+                 <SelectContent>
+                    {counsellors.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+                 </SelectContent>
               </Select>
-            </div>
-          </div>
+           </div>
+           <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEnrollmentAssignDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAssignEnrollmentCounsellor} disabled={isUpdating}>{isUpdating && <Loader2 className="animate-spin w-4 h-4 mr-2" />} Assign</Button>
+           </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
+      {/* Add Link Dialog */}
+       <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Meeting Link</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+             <Label>Meeting URL</Label>
+             <Input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} placeholder="https://meet.google.com/..." />
+          </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsLinkDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleAddMeetingLink} disabled={isUpdating}>
-              {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Add Link
-            </Button>
+              <Button variant="outline" onClick={() => setIsLinkDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddMeetingLink} disabled={isUpdating}>{isUpdating && <Loader2 className="animate-spin w-4 h-4 mr-2" />} Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={isRescheduleDialogOpen} onOpenChange={setIsRescheduleDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Reschedule Session</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+             <div>
+                <Label>New Date</Label>
+                <Input 
+                   type="date"
+                   value={rescheduleData.preferredDate} 
+                   onChange={(e) => setRescheduleData(prev => ({ ...prev, preferredDate: e.target.value }))} 
+                   min={new Date().toISOString().split('T')[0]}
+                />
+             </div>
+             <div>
+                <Label>New Time Slot</Label>
+                <Select value={rescheduleData.preferredTimeSlot} onValueChange={(val) => setRescheduleData(prev => ({ ...prev, preferredTimeSlot: val }))}>
+                   <SelectTrigger><SelectValue placeholder="Select Time Slot" /></SelectTrigger>
+                   <SelectContent>
+                      {timeSlots.map(slot => <SelectItem key={slot} value={slot}>{slot}</SelectItem>)}
+                   </SelectContent>
+                </Select>
+             </div>
+          </div>
+          <DialogFooter>
+              <Button variant="outline" onClick={() => setIsRescheduleDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleReschedule} disabled={isUpdating}>{isUpdating && <Loader2 className="animate-spin w-4 h-4 mr-2" />} Reschedule</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Cancel Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Cancel Session (Admin)</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+             <Label>Cancellation Reason</Label>
+             <Input 
+               value={cancelReason} 
+               onChange={(e) => setCancelReason(e.target.value)} 
+               placeholder="e.g. Counsellor unavailable, Student request..." 
+             />
+          </div>
+          <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>Back</Button>
+              <Button onClick={handleAdminCancel} variant="destructive" disabled={isUpdating}>{isUpdating && <Loader2 className="animate-spin w-4 h-4 mr-2" />} Confirm Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

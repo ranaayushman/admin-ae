@@ -191,6 +191,7 @@ export interface CounsellingEnrollment {
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
+  sessions?: CounsellingSession[];
 }
 
 // API Response Types
@@ -244,22 +245,29 @@ export interface EnrollmentsResponse {
 // Session
 export interface CounsellingSession {
   _id: string;
-  userId: string;
-  user?: {
+  userId: {
+    _id: string;
     name: string;
     email: string;
     phone: string;
-  };
-  counsellorId: string;
+  } | string; // Handle both populated and string ID cases
+  enrolledAt?: string; // Optional if needed
+  counsellorId: string | null;
   counsellor?: Counsellor;
-  enrollmentId?: string;
-  enrollment?: CounsellingEnrollment;
-  paymentId?: string; // For direct booking
+  enrollmentId: {
+    _id: string;
+    packageId: string;
+  } | string;
+  enrollment?: CounsellingEnrollment; // Keep for backward compatibility if used elsewhere
+  isDirectBooking?: boolean;
+  scheduledDate?: string; // API returns this instead of preferredDate sometimes?
+  duration?: number;
+  paymentId?: string;
   amountPaid?: number;
   preferredDate: string;
   preferredTimeSlot: string;
   scheduledAt?: string;
-  status: "scheduled" | "completed" | "cancelled" | "no-show";
+  status: "scheduled" | "completed" | "cancelled" | "no-show" | "confirmed" | "pending_assignment";
   agenda?: string;
   meetingPreference?: string;
   meetingLink?: string;
@@ -283,7 +291,7 @@ export interface CreateSessionPayload {
 }
 
 export interface UpdateSessionStatusPayload {
-  status: "completed" | "cancelled" | "no-show" | "scheduled";
+  status: "completed" | "cancelled" | "no-show" | "scheduled" | "confirmed";
   notes?: string;
   nextSteps?: string;
 }

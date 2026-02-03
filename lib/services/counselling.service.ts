@@ -11,6 +11,8 @@ import {
   CounsellingEnrollment,
   EnrollmentsResponse,
   ExamType,
+  SessionsResponse,
+  CounsellingSession,
 } from "@/lib/types/counselling";
 
 export interface GetPackagesParams {
@@ -312,12 +314,12 @@ export const counsellingService = {
    * Get sessions for a counsellor
    * GET /counselling/sessions/counsellor/:id
    */
-  getCounsellorSessions: async (counsellorId: string): Promise<any[]> => {
+  getSessionsByCounsellor: async (counsellorId: string): Promise<SessionsResponse> => {
     console.log(`🚀 [counsellingService] GET /counselling/sessions/counsellor/${counsellorId}`);
-    const response: AxiosResponse<any> = 
+    const response: AxiosResponse<SessionsResponse> = 
       await apiClient.get(`/counselling/sessions/counsellor/${counsellorId}`);
     console.log("✅ [counsellingService] Response:", response.data);
-    return response.data.data || response.data;
+    return response.data;
   },
 
   /**
@@ -336,16 +338,20 @@ export const counsellingService = {
   },
 
   /**
-   * Add meeting link to session
-   * PATCH /counselling/sessions/:id/meeting-link
+   * Add meeting link (Confirm session)
+   * PATCH /counselling/sessions/:id/confirm
    */
   addMeetingLink: async (
     sessionId: string,
-    payload: { meetingLink: string; meetingPlatform?: string }
+    payload: { 
+      meetingLink: string; 
+      meetingPlatform?: string;
+      counsellorId?: string;
+    }
   ): Promise<any> => {
-    console.log(`🚀 [counsellingService] PATCH /counselling/sessions/${sessionId}/meeting-link`, payload);
+    console.log(`🚀 [counsellingService] PATCH /counselling/sessions/${sessionId}/confirm`, payload);
     const response: AxiosResponse<{ success: boolean; data: any }> = 
-      await apiClient.patch(`/counselling/sessions/${sessionId}/meeting-link`, payload);
+      await apiClient.patch(`/counselling/sessions/${sessionId}/confirm`, payload);
     console.log("✅ [counsellingService] Response:", response.data);
     return response.data.data || response.data;
   },
@@ -401,6 +407,96 @@ export const counsellingService = {
       await apiClient.get("/counselling/reviews", { params });
     console.log("✅ [counsellingService] Response:", response.data);
     return response.data;
+  },
+  /**
+   * Get all sessions (admin)
+   * GET /counselling/sessions
+   */
+  getAllSessions: async (params?: {
+    status?: string;
+    counsellorId?: string;
+    enrollmentId?: string;
+    userId?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<CounsellingSession[]> => {
+    console.log("🚀 [counsellingService] GET /counselling/sessions", params);
+    const response: AxiosResponse<CounsellingSession[]> = await apiClient.get(
+      "/counselling/sessions",
+      { params }
+    );
+    console.log("✅ [counsellingService] Response:", response.data);
+    return response.data;
+  },
+
+  /**
+   * Assign counsellor to session
+   * PATCH /counselling/sessions/:id/assign-counsellor
+   */
+  assignSessionCounsellor: async (
+    sessionId: string,
+    counsellorId: string
+  ): Promise<CounsellingSession> => {
+    console.log(
+      `🚀 [counsellingService] PATCH /counselling/sessions/${sessionId}/assign-counsellor`
+    );
+    const response: AxiosResponse<{
+      success: boolean;
+      data: CounsellingSession;
+    }> = await apiClient.patch(
+      `/counselling/sessions/${sessionId}/assign-counsellor`,
+      { counsellorId }
+    );
+    console.log("✅ [counsellingService] Response:", response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Reschedule session
+   * PATCH /counselling/sessions/:id/reschedule
+   */
+  rescheduleSession: async (
+    sessionId: string,
+    payload: { preferredDate: string; preferredTimeSlot: string }
+  ): Promise<CounsellingSession> => {
+    console.log(
+      `🚀 [counsellingService] PATCH /counselling/sessions/${sessionId}/reschedule`,
+      payload
+    );
+    const response: AxiosResponse<{
+      success: boolean;
+      data: CounsellingSession;
+    }> = await apiClient.patch(
+      `/counselling/sessions/${sessionId}/reschedule`,
+      payload
+    );
+    console.log("✅ [counsellingService] Response:", response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Admin cancel session
+   * PATCH /counselling/sessions/:id/admin-cancel
+   */
+  adminCancelSession: async (
+    sessionId: string,
+    payload: { reason: string }
+  ): Promise<CounsellingSession> => {
+    console.log(
+      `🚀 [counsellingService] PATCH /counselling/sessions/${sessionId}/admin-cancel`,
+      payload
+    );
+    const response: AxiosResponse<{
+      success: boolean;
+      data: CounsellingSession;
+    }> = await apiClient.patch(
+      `/counselling/sessions/${sessionId}/admin-cancel`,
+      payload
+    );
+    console.log("✅ [counsellingService] Response:", response.data);
+    return response.data.data || response.data;
   },
 };
 
