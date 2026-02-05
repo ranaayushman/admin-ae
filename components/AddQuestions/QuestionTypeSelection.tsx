@@ -1,7 +1,7 @@
 // components/add-pyq/QuestionTypeSection.tsx
 "use client";
 
-import { useFieldArray, Control, UseFormRegister } from "react-hook-form";
+import { useFieldArray, Control, UseFormRegister, Controller } from "react-hook-form";
 import {
   AddPyqFormValues,
   QuestionType,
@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { OptionEditor } from "./OptionEditor";
+import { ImagePlus, X } from "lucide-react";
+import Image from "next/image";
+import React from "react";
 
 interface QuestionTypeSectionProps {
   control: Control<AddPyqFormValues>;
@@ -46,7 +49,21 @@ export function QuestionTypeSection({
       id: crypto.randomUUID(),
       text: "",
       isCorrect: false,
+      imageBase64: "",
     });
+  };
+
+  const handleImageUpload = (index: number, file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      update(index, { ...fields[index], imageBase64: base64 });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    update(index, { ...fields[index], imageBase64: "" });
   };
 
   return (
@@ -100,9 +117,9 @@ export function QuestionTypeSection({
             </Button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {fields.map((field, index) => (
-              <div key={field.id} className="space-y-2">
+              <div key={field.id} className="space-y-2 p-3 border rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-semibold text-gray-600">
                     Option {String.fromCharCode(65 + index)}
@@ -122,14 +139,58 @@ export function QuestionTypeSection({
                     </span>
                   </div>
                 </div>
-                <OptionEditor
-                  value={field.text}
-                  onChange={(value) => update(index, { ...field, text: value })}
-                  placeholder={`Enter option ${String.fromCharCode(
-                    65 + index
-                  )} text (supports math formulas)`}
-                  error={errors.options?.[index]?.text?.message}
+                
+                {/* Use Controller for text input to avoid focus loss */}
+                <Controller
+                  name={`options.${index}.text`}
+                  control={control}
+                  render={({ field: textField }) => (
+                    <OptionEditor
+                      value={textField.value ?? ""}
+                      onChange={textField.onChange}
+                      placeholder={`Enter option ${String.fromCharCode(
+                        65 + index
+                      )} text (supports math formulas)`}
+                      error={errors.options?.[index]?.text?.message}
+                    />
+                  )}
                 />
+
+                {/* Image upload for option */}
+                <div className="flex items-center gap-3 pt-2">
+                  {field.imageBase64 ? (
+                    <div className="relative inline-block">
+                      <Image
+                        src={field.imageBase64}
+                        alt={`Option ${String.fromCharCode(65 + index)} image`}
+                        width={120}
+                        height={80}
+                        className="rounded border object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors border border-dashed rounded px-3 py-2">
+                      <ImagePlus className="h-4 w-4" />
+                      <span>Add Image</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(index, file);
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             ))}
           </div>

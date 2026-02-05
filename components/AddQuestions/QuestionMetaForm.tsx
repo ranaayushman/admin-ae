@@ -43,6 +43,7 @@ export function QuestionMetaForm({
                 <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
                 <SelectItem value="boards">Boards</SelectItem>
                 <SelectItem value="wbjee">WBJEE</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           )}

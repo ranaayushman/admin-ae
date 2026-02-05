@@ -51,6 +51,7 @@ export const addPyqSchema = z
             .string()
             .refine((val) => hasTextContent(val), "Option cannot be empty"),
           isCorrect: z.boolean(),
+          imageBase64: z.string().optional(),
         })
       )
       .optional(),

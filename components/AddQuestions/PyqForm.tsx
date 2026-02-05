@@ -64,10 +64,10 @@ export function AddPyqForm() {
       solution: "",
       questionType: "SINGLE_CORRECT",
       options: [
-        { id: crypto.randomUUID(), text: "", isCorrect: false },
-        { id: crypto.randomUUID(), text: "", isCorrect: false },
-        { id: crypto.randomUUID(), text: "", isCorrect: false },
-        { id: crypto.randomUUID(), text: "", isCorrect: false },
+        { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+        { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+        { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+        { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
       ],
     },
     mode: "onBlur", // Validate on blur for better UX
@@ -165,10 +165,10 @@ export function AddPyqForm() {
         options:
           questionType === "SINGLE_CORRECT" || questionType === "MULTI_CORRECT"
             ? [
-                { id: crypto.randomUUID(), text: "", isCorrect: false },
-                { id: crypto.randomUUID(), text: "", isCorrect: false },
-                { id: crypto.randomUUID(), text: "", isCorrect: false },
-                { id: crypto.randomUUID(), text: "", isCorrect: false },
+                { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+                { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+                { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+                { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
               ]
             : [],
         integerAnswer: "",
