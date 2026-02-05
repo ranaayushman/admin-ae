@@ -365,6 +365,7 @@ export interface AdmissionGuidance {
   class12Status: "appearing" | "passed";
   tenthPercentage: string;
   twelfthPercentageExpected?: string;
+  collegeChoice?: string;
   additionalMessage?: string;
   createdAt: string;
   updatedAt: string;
@@ -376,5 +377,25 @@ export interface AdmissionGuidanceResponse {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface AdmissionGuidanceStats {
+  totalRequests: number;
+  requestsToday: number;
+  requestsThisWeek: number;
+  byExam: Array<{ exam: string; count: number }>;
+  byCategory: Array<{ category: string; count: number }>;
+  byClass12Status: Array<{ status: string; count: number }>;
+  topStates: Array<{ state: string; count: number }>;
+  recentRequests: Array<{
+    _id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    exam: string;
+    category: string;
+    homeState: string;
+    createdAt: string;
+  }>;
 }
 

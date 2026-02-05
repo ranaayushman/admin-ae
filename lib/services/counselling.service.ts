@@ -15,6 +15,7 @@ import {
   CounsellingSession,
   AdmissionGuidance,
   AdmissionGuidanceResponse,
+  AdmissionGuidanceStats,
 } from "@/lib/types/counselling";
 
 
@@ -544,6 +545,19 @@ export const counsellingService = {
     console.log(`🚀 [counsellingService] DELETE /admission-guidance/${id}`);
     await apiClient.delete(`/admission-guidance/${id}`);
     console.log("✅ [counsellingService] Admission guidance deleted");
+  },
+
+  /**
+   * Get admission guidance stats
+   * GET /admission-guidance/stats
+   */
+  getAdmissionGuidanceStats: async (): Promise<AdmissionGuidanceStats> => {
+    console.log("🚀 [counsellingService] GET /admission-guidance/stats");
+    const response: AxiosResponse<AdmissionGuidanceStats> = await apiClient.get(
+      "/admission-guidance/stats"
+    );
+    console.log("✅ [counsellingService] Response:", response.data);
+    return response.data;
   },
 };
 

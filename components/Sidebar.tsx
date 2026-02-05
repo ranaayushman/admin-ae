@@ -64,11 +64,6 @@ const navItems: NavItem[] = [
         path: "/counselling/counsellors",
       },
       {
-        name: "Counselling Inquiries",
-        icon: MessageSquare,
-        path: "/counselling/inquiries",
-      },
-      {
         name: "Admission Guidance",
         icon: GraduationCap,
         path: "/counselling/admission-guidance",

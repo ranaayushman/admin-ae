@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { counsellingService } from "@/lib/services/counselling.service";
-import { AdmissionGuidance } from "@/lib/types/counselling";
+import { AdmissionGuidance, AdmissionGuidanceStats } from "@/lib/types/counselling";
 import {
   Card,
   CardContent,
@@ -55,6 +55,12 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  TrendingUp,
+  Clock,
+  CalendarDays,
+  BarChart3,
+  PieChart,
+  Activity,
 } from "lucide-react";
 
 // Simple time ago formatter
@@ -99,8 +105,26 @@ const class12StatusLabels: Record<string, { label: string; color: string }> = {
   "passed": { label: "Passed", color: "bg-green-500" },
 };
 
+const examColors: Record<string, string> = {
+  "jee-main": "bg-orange-500",
+  "jee-advanced": "bg-red-500",
+  "neet-ug": "bg-green-500",
+  "wbjee": "bg-blue-500",
+  "other-state-exam": "bg-purple-500",
+};
+
+const categoryColors: Record<string, string> = {
+  "general": "bg-gray-500",
+  "obc-ncl": "bg-yellow-500",
+  "sc": "bg-blue-600",
+  "st": "bg-green-600",
+  "ews": "bg-indigo-500",
+  "pwd": "bg-pink-500",
+};
+
 export default function AdmissionGuidancePage() {
   const [submissions, setSubmissions] = useState<AdmissionGuidance[]>([]);
+  const [stats, setStats] = useState<AdmissionGuidanceStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -117,6 +141,16 @@ export default function AdmissionGuidancePage() {
   const [selectedSubmission, setSelectedSubmission] =
     useState<AdmissionGuidance | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
+  // Fetch stats
+  const fetchStats = useCallback(async () => {
+    try {
+      const statsData = await counsellingService.getAdmissionGuidanceStats();
+      setStats(statsData);
+    } catch (error: any) {
+      console.error("Failed to fetch stats:", error);
+    }
+  }, []);
 
   // Fetch submissions
   const fetchSubmissions = useCallback(async () => {
@@ -145,8 +179,9 @@ export default function AdmissionGuidancePage() {
   }, [currentPage, filterExam]);
 
   useEffect(() => {
+    fetchStats();
     fetchSubmissions();
-  }, [fetchSubmissions]);
+  }, [fetchStats, fetchSubmissions]);
 
   // Open view dialog
   const handleView = (submission: AdmissionGuidance) => {
@@ -185,6 +220,7 @@ export default function AdmissionGuidancePage() {
       "Class 12 Status",
       "10th Percentage",
       "12th Percentage",
+      "College Choice",
       "Additional Message",
       "Submitted At",
     ];
@@ -200,6 +236,7 @@ export default function AdmissionGuidancePage() {
       class12StatusLabels[s.class12Status]?.label || s.class12Status,
       s.tenthPercentage,
       s.twelfthPercentageExpected || "-",
+      s.collegeChoice || "-",
       s.additionalMessage || "-",
       new Date(s.createdAt).toLocaleString(),
     ]);
@@ -310,6 +347,7 @@ export default function AdmissionGuidancePage() {
               <th>Class 12</th>
               <th>10th %</th>
               <th>12th %</th>
+              <th>College Choice</th>
               <th>Submitted</th>
             </tr>
           </thead>
@@ -328,6 +366,7 @@ export default function AdmissionGuidancePage() {
                 <td><span class="badge ${s.class12Status}">${class12StatusLabels[s.class12Status]?.label || s.class12Status}</span></td>
                 <td>${s.tenthPercentage}</td>
                 <td>${s.twelfthPercentageExpected || "-"}</td>
+                <td>${s.collegeChoice || "-"}</td>
                 <td>${new Date(s.createdAt).toLocaleDateString()}</td>
               </tr>
             `
@@ -380,36 +419,248 @@ export default function AdmissionGuidancePage() {
         </Button>
       </div>
 
-      {/* Stats Card */}
+      {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-blue-600">
+                  {stats?.totalRequests || total}
+                </div>
+                <p className="text-sm text-muted-foreground">Total Requests</p>
+              </div>
+              <div className="p-3 bg-blue-500/20 rounded-full">
+                <BarChart3 className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200 dark:border-green-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-green-600">
+                  {stats?.requestsToday || 0}
+                </div>
+                <p className="text-sm text-muted-foreground">Today</p>
+              </div>
+              <div className="p-3 bg-green-500/20 rounded-full">
+                <Clock className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200 dark:border-purple-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-purple-600">
+                  {stats?.requestsThisWeek || 0}
+                </div>
+                <p className="text-sm text-muted-foreground">This Week</p>
+              </div>
+              <div className="p-3 bg-purple-500/20 rounded-full">
+                <CalendarDays className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-200 dark:border-orange-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-orange-600">
+                  {stats?.topStates?.[0]?.state || "—"}
+                </div>
+                <p className="text-sm text-muted-foreground">Top State</p>
+              </div>
+              <div className="p-3 bg-orange-500/20 rounded-full">
+                <MapPin className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Insights Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Exam Breakdown */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{total}</div>
-            <p className="text-sm text-muted-foreground">Total Submissions</p>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <GraduationCap className="w-5 h-5" />
+              By Exam
+            </CardTitle>
+            <CardDescription>Distribution across exams</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats?.byExam?.map((item) => {
+                const percentage = stats.totalRequests > 0 
+                  ? Math.round((item.count / stats.totalRequests) * 100) 
+                  : 0;
+                return (
+                  <div key={item.exam}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium">{examLabels[item.exam] || item.exam}</span>
+                      <span className="text-muted-foreground">{item.count} ({percentage}%)</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${examColors[item.exam] || "bg-gray-500"} transition-all`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {(!stats?.byExam || stats.byExam.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4">No data available</p>
+              )}
+            </div>
           </CardContent>
         </Card>
-        <Card className="border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-blue-600">
-              {submissions.filter((s) => s.class12Status === "appearing").length}
+
+        {/* Category Breakdown */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <PieChart className="w-5 h-5" />
+              By Category
+            </CardTitle>
+            <CardDescription>Student category distribution</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats?.byCategory?.map((item) => {
+                const percentage = stats.totalRequests > 0 
+                  ? Math.round((item.count / stats.totalRequests) * 100) 
+                  : 0;
+                return (
+                  <div key={item.category}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium">{categoryLabels[item.category] || item.category}</span>
+                      <span className="text-muted-foreground">{item.count} ({percentage}%)</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${categoryColors[item.category] || "bg-gray-500"} transition-all`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {(!stats?.byCategory || stats.byCategory.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4">No data available</p>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground">Appearing</p>
           </CardContent>
         </Card>
-        <Card className="border-green-200 dark:border-green-800">
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">
-              {submissions.filter((s) => s.class12Status === "passed").length}
+
+        {/* Top States */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Top States
+            </CardTitle>
+            <CardDescription>Most requests by location</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats?.topStates?.map((item, index) => (
+                <div key={item.state} className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm
+                    ${index === 0 ? "bg-yellow-500" : index === 1 ? "bg-gray-400" : index === 2 ? "bg-amber-600" : "bg-gray-300"}`}>
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{item.state}</p>
+                    <p className="text-sm text-muted-foreground">{item.count} request{item.count !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+              ))}
+              {(!stats?.topStates || stats.topStates.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4">No data available</p>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground">Passed</p>
           </CardContent>
         </Card>
-        <Card className="border-purple-200 dark:border-purple-800">
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-purple-600">
-              {submissions.filter((s) => s.exam === "neet-ug").length}
+      </div>
+
+      {/* Class 12 Status & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Class 12 Status */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Class 12 Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              {stats?.byClass12Status?.map((item) => {
+                const statusInfo = class12StatusLabels[item.status] || { label: item.status, color: "bg-gray-500" };
+                const percentage = stats.totalRequests > 0 
+                  ? Math.round((item.count / stats.totalRequests) * 100) 
+                  : 0;
+                return (
+                  <div key={item.status} className="flex-1 p-4 rounded-lg bg-muted/50 text-center">
+                    <div className={`inline-block px-3 py-1 ${statusInfo.color} text-white rounded-full text-sm font-medium mb-2`}>
+                      {statusInfo.label}
+                    </div>
+                    <div className="text-2xl font-bold">{item.count}</div>
+                    <p className="text-sm text-muted-foreground">{percentage}% of total</p>
+                  </div>
+                );
+              })}
+              {(!stats?.byClass12Status || stats.byClass12Status.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4 w-full">No data available</p>
+              )}
             </div>
-            <p className="text-sm text-muted-foreground">NEET Aspirants</p>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats?.recentRequests?.slice(0, 4).map((req) => (
+                <div key={req._id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{req.fullName}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Badge variant="outline" className="text-xs">
+                        {examLabels[req.exam] || req.exam}
+                      </Badge>
+                      <span>•</span>
+                      <span>{req.homeState}</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(req.createdAt)}
+                  </div>
+                </div>
+              ))}
+              {(!stats?.recentRequests || stats.recentRequests.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -662,6 +913,19 @@ export default function AdmissionGuidancePage() {
                   </p>
                 </div>
               </div>
+
+              {/* College Choice */}
+              {selectedSubmission.collegeChoice && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <GraduationCap className="w-4 h-4" />
+                    Preferred College / Institute
+                  </p>
+                  <p className="p-3 rounded-lg bg-primary/10 font-medium">
+                    {selectedSubmission.collegeChoice}
+                  </p>
+                </div>
+              )}
 
               {/* Additional Message */}
               {selectedSubmission.additionalMessage && (
