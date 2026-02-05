@@ -57,9 +57,9 @@ export const counsellorService = {
    * GET /counsellors/:id
    */
   getCounsellorById: async (id: string): Promise<Counsellor> => {
-    console.log(`🚀 [counsellorService] GET /counsellors/${id}`);
+    console.log(`🚀 [counsellorService] GET /counselling/counsellors/${id}`);
     const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
-      await apiClient.get(`/counsellors/${id}`);
+      await apiClient.get(`/counselling/counsellors/${id}`);
     console.log("✅ [counsellorService] Response:", response.data);
     return response.data.data || response.data;
   },
@@ -73,11 +73,11 @@ export const counsellorService = {
     payload: UpdateCounsellorPayload,
   ): Promise<Counsellor> => {
     console.log(
-      `🚀 [counsellorService] PATCH /counsellors/${id}`,
+      `🚀 [counsellorService] PATCH /counselling/counsellors/${id}`,
       JSON.stringify(payload, null, 2),
     );
     const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
-      await apiClient.patch(`/counsellors/${id}`, payload);
+      await apiClient.patch(`/counselling/counsellors/${id}`, payload);
     console.log("✅ [counsellorService] Response:", response.data);
     return response.data.data || response.data;
   },
@@ -87,8 +87,8 @@ export const counsellorService = {
    * DELETE /counsellors/:id
    */
   deleteCounsellor: async (id: string): Promise<void> => {
-    console.log(`🚀 [counsellorService] DELETE /counsellors/${id}`);
-    await apiClient.delete(`/counsellors/${id}`);
+    console.log(`🚀 [counsellorService] DELETE /counselling/counsellors/${id}`);
+    await apiClient.delete(`/counselling/counsellors/${id}`);
     console.log("✅ [counsellorService] Counsellor deleted");
   },
 
@@ -113,9 +113,9 @@ export const counsellorService = {
     id: string,
     newRating: number,
   ): Promise<Counsellor> => {
-    console.log(`🚀 [counsellorService] PATCH /counsellors/${id}/rating`, { newRating });
+    console.log(`🚀 [counsellorService] PATCH /counselling/counsellors/${id}/rating`, { newRating });
     const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
-      await apiClient.patch(`/counsellors/${id}/rating`, { newRating });
+      await apiClient.patch(`/counselling/counsellors/${id}/rating`, { newRating });
     console.log("✅ [counsellorService] Response:", response.data);
     return response.data.data || response.data;
   },

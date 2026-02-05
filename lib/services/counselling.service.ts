@@ -13,7 +13,10 @@ import {
   ExamType,
   SessionsResponse,
   CounsellingSession,
+  AdmissionGuidance,
+  AdmissionGuidanceResponse,
 } from "@/lib/types/counselling";
+
 
 export interface GetPackagesParams {
   examType?: ExamType;
@@ -497,6 +500,50 @@ export const counsellingService = {
     );
     console.log("✅ [counsellingService] Response:", response.data);
     return response.data.data || response.data;
+  },
+
+  // ==================== ADMISSION GUIDANCE ====================
+
+  /**
+   * Get all admission guidance submissions
+   * GET /admission-guidance
+   */
+  getAdmissionGuidance: async (params?: {
+    page?: number;
+    limit?: number;
+    exam?: string;
+  }): Promise<AdmissionGuidanceResponse> => {
+    console.log("🚀 [counsellingService] GET /admission-guidance", params);
+    const response: AxiosResponse<AdmissionGuidanceResponse> = await apiClient.get(
+      "/admission-guidance",
+      { params }
+    );
+    console.log("✅ [counsellingService] Response:", response.data);
+    return response.data;
+  },
+
+  /**
+   * Get single admission guidance by ID
+   * GET /admission-guidance/:id
+   */
+  getAdmissionGuidanceById: async (id: string): Promise<AdmissionGuidance> => {
+    console.log(`🚀 [counsellingService] GET /admission-guidance/${id}`);
+    const response: AxiosResponse<{
+      success: boolean;
+      data: AdmissionGuidance;
+    }> = await apiClient.get(`/admission-guidance/${id}`);
+    console.log("✅ [counsellingService] Response:", response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Delete admission guidance submission
+   * DELETE /admission-guidance/:id
+   */
+  deleteAdmissionGuidance: async (id: string): Promise<void> => {
+    console.log(`🚀 [counsellingService] DELETE /admission-guidance/${id}`);
+    await apiClient.delete(`/admission-guidance/${id}`);
+    console.log("✅ [counsellingService] Admission guidance deleted");
   },
 };
 

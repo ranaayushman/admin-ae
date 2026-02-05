@@ -23,6 +23,7 @@ import {
   UserCheck,
   UserPlus,
   Users,
+  UsersRound,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useState } from "react";
@@ -36,6 +37,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { name: "All Users", icon: UsersRound, path: "/users" },
   { name: "Question Bank", icon: HelpCircle, path: "/questions" },
   { name: "Test Series", icon: ListChecks, path: "/test-series" },
   { name: "Manual Enrollment", icon: Users, path: "/enrollments/manual" },
@@ -65,6 +67,11 @@ const navItems: NavItem[] = [
         name: "Counselling Inquiries",
         icon: MessageSquare,
         path: "/counselling/inquiries",
+      },
+      {
+        name: "Admission Guidance",
+        icon: GraduationCap,
+        path: "/counselling/admission-guidance",
       },
     ],
   },

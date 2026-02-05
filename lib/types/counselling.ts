@@ -351,3 +351,30 @@ export interface ReviewsResponse {
     limit: number;
   };
 }
+
+// Admission Guidance Submission
+export interface AdmissionGuidance {
+  _id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  exam: "jee-main" | "jee-advanced" | "neet-ug" | "wbjee" | "other-state-exam";
+  rankScore?: string;
+  category: "general" | "obc-ncl" | "sc" | "st" | "ews" | "pwd";
+  homeState: string;
+  class12Status: "appearing" | "passed";
+  tenthPercentage: string;
+  twelfthPercentageExpected?: string;
+  additionalMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdmissionGuidanceResponse {
+  data: AdmissionGuidance[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
