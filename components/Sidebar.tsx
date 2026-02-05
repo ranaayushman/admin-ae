@@ -92,6 +92,32 @@ const navItems: NavItem[] = [
     ],
   },
   
+  // Internships Group
+  {
+    name: "Internships",
+    icon: GraduationCap,
+    items: [
+      {
+        name: "Applications",
+        icon: UserCheck,
+        path: "/internships/applications",
+      },
+    ],
+  },
+  
+  // Support Group
+  {
+    name: "Support",
+    icon: HelpCircle,
+    items: [
+      {
+        name: "Contact Inquiries",
+        icon: MessageSquare,
+        path: "/support/contact-inquiries",
+      },
+    ],
+  },
+  
   { name: "Packages", icon: FileText, path: "/packages" }, // Kept separate as it might be general packages? Or should it be under something? Leaving as is per request scope.
   { name: "Footer Links", icon: Settings, path: "/settings/footer" },
   { name: "Settings", icon: Settings, path: "/settings" },
