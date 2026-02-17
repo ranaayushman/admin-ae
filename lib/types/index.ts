@@ -77,7 +77,7 @@ export interface Question {
   solutionText: string;
   questionImageBase64?: string | null;
   solutionImageBase64?: string | null;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty: 'easy' | 'medium' | 'hard';
   metadata: QuestionMetadata;
   createdAt: string;
   updatedAt: string;
@@ -93,7 +93,7 @@ export interface CreateQuestionPayload {
   solutionText: string;
   questionImageBase64?: string | null;
   solutionImageBase64?: string | null;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty: 'easy' | 'medium' | 'hard';
   metadata: QuestionMetadata;
 }
 
@@ -120,7 +120,7 @@ export interface QuestionFilters {
   category?: string;
   chapter?: string;
   topic?: string;
-  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty?: 'easy' | 'medium' | 'hard';
   search?: string;
   page?: number;
   limit?: number;

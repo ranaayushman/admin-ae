@@ -37,7 +37,7 @@ export default function QuestionEditPage() {
     questionText: "",
     solutionText: "",
     options: [] as { text: string; isCorrect: boolean }[],
-    difficulty: "MEDIUM",
+    difficulty: "medium",
     marks: 4,
     chapter: "",
     topic: "",
@@ -67,7 +67,7 @@ export default function QuestionEditPage() {
           questionText: data.questionText,
           solutionText: data.solutionText,
           options: parsedOptions,
-          difficulty: data.difficulty,
+          difficulty: data.difficulty?.toLowerCase() || "medium",
           marks: data.metadata.marks,
           chapter: data.chapter,
           topic: data.topic,
@@ -104,7 +104,7 @@ export default function QuestionEditPage() {
         solutionText: editData.solutionText,
         options: editData.options.map((opt) => ({ text: opt.text })),
         correctAnswer,
-        difficulty: editData.difficulty as "EASY" | "MEDIUM" | "HARD",
+        difficulty: editData.difficulty.toLowerCase() as "easy" | "medium" | "hard",
         metadata: { marks: editData.marks, year: question.metadata.year },
         chapter: editData.chapter,
         topic: editData.topic,
@@ -286,9 +286,9 @@ export default function QuestionEditPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="EASY">Easy</SelectItem>
-                      <SelectItem value="MEDIUM">Medium</SelectItem>
-                      <SelectItem value="HARD">Hard</SelectItem>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
