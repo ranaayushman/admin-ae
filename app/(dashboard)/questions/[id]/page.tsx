@@ -111,13 +111,12 @@ export default function QuestionDetailPage() {
                 {question.category}
               </span>
               <span
-                className={`px-2 py-1 text-xs rounded ${
-                  question.difficulty === "EASY"
+                className={`px-2 py-1 text-xs rounded ${question.difficulty === "EASY"
                     ? "bg-green-100 text-green-700"
                     : question.difficulty === "MEDIUM"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-red-100 text-red-700"
-                }`}
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
               >
                 {question.difficulty}
               </span>
@@ -158,20 +157,21 @@ export default function QuestionDetailPage() {
                   {question.options.map((opt, i) => {
                     const letter = String.fromCharCode(65 + i);
                     const isCorrect = question.correctAnswer.includes(letter);
+                    // Handle both object { text: string } and plain string formats
+                    const optionText = typeof opt === "string" ? opt : opt.text;
                     return (
                       <div
                         key={i}
-                        className={`p-3 rounded-lg border ${
-                          isCorrect
+                        className={`p-3 rounded-lg border ${isCorrect
                             ? "border-green-500 bg-green-50"
                             : "border-gray-200"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-start gap-2">
                           <span className="font-medium min-w-6">{letter}.</span>
                           <div className="flex-1">
                             <QuestionRenderer
-                              content={opt}
+                              content={optionText}
                               className="text-sm"
                             />
                           </div>
