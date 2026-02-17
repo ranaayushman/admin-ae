@@ -98,16 +98,18 @@ export function AddPyqForm() {
     try {
       // Map form data to API payload format
       let correctAnswer = "";
-      let optionsArray: string[] = [];
+      let optionsArray: { text: string }[] = [];
 
       if (data.questionType === "SINGLE_CORRECT" || data.questionType === "MULTI_CORRECT") {
-        // For MCQ questions
-        optionsArray = data.options?.map((opt) => opt.text) || [];
-        
+        // For MCQ questions - map to { text } format expected by backend
+        optionsArray = data.options?.map((opt) => ({
+          text: opt.text,
+        })) || [];
+
         if (data.questionType === "SINGLE_CORRECT") {
           // Find the index of the correct option (A, B, C, D...)
           const correctIndex = data.options?.findIndex((opt) => opt.isCorrect);
-          correctAnswer = correctIndex !== undefined && correctIndex !== -1 
+          correctAnswer = correctIndex !== undefined && correctIndex !== -1
             ? String.fromCharCode(65 + correctIndex) // 65 is 'A'
             : "A";
         } else {
@@ -165,11 +167,11 @@ export function AddPyqForm() {
         options:
           questionType === "SINGLE_CORRECT" || questionType === "MULTI_CORRECT"
             ? [
-                { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
-                { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
-                { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
-                { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
-              ]
+              { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+              { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+              { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+              { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
+            ]
             : [],
         integerAnswer: "",
         numericalAnswer: "",
@@ -178,7 +180,7 @@ export function AddPyqForm() {
       });
     } catch (error: any) {
       console.error("❌ Error creating question:", error);
-      
+
       toast.error("Failed to save question", {
         description: error?.message || "Please try again or check the console for details.",
         position: "bottom-center",
