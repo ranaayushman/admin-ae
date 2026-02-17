@@ -53,12 +53,14 @@ export default function QuestionEditPage() {
         // Parse options from the question
         const parsedOptions = data.options
           ? data.options.map((opt, idx) => {
-              const letter = String.fromCharCode(65 + idx);
-              return {
-                text: opt,
-                isCorrect: data.correctAnswer.includes(letter),
-              };
-            })
+            const letter = String.fromCharCode(65 + idx);
+            // Handle both object { text: string } and plain string formats
+            const optionText = typeof opt === "string" ? opt : opt.text;
+            return {
+              text: optionText,
+              isCorrect: data.correctAnswer.includes(letter),
+            };
+          })
           : [];
 
         setEditData({
@@ -100,7 +102,7 @@ export default function QuestionEditPage() {
       await questionService.updateQuestion(id, {
         questionText: editData.questionText,
         solutionText: editData.solutionText,
-        options: editData.options.map((opt) => opt.text),
+        options: editData.options.map((opt) => ({ text: opt.text })),
         correctAnswer,
         difficulty: editData.difficulty as "EASY" | "MEDIUM" | "HARD",
         metadata: { marks: editData.marks, year: question.metadata.year },
