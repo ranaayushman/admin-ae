@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   addPyqSchema,
@@ -46,15 +46,7 @@ export function AddPyqForm() {
 
   const savedMetadata = loadSavedMetadata();
 
-  const {
-    register,
-    control,
-    handleSubmit,
-    setValue,
-    formState: { errors, isSubmitting },
-    reset,
-    watch,
-  } = useForm<AddPyqFormValues>({
+  const methods = useForm<AddPyqFormValues>({
     resolver: zodResolver(addPyqSchema),
     defaultValues: {
       subject: savedMetadata.subject || "",
@@ -70,8 +62,18 @@ export function AddPyqForm() {
         { id: crypto.randomUUID(), text: "", isCorrect: false, imageBase64: "" },
       ],
     },
-    mode: "onBlur", // Validate on blur for better UX
+    mode: "onBlur",
   });
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+    reset,
+    watch,
+  } = methods;
 
   const questionValue = watch("question");
   const solutionValue = watch("solution");
@@ -194,6 +196,7 @@ export function AddPyqForm() {
         <CardTitle>Add PYQ – JEE / NEET Question</CardTitle>
       </CardHeader>
       <CardContent>
+        <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
           {/* Meta */}
           <section className="space-y-3">
@@ -307,6 +310,7 @@ export function AddPyqForm() {
             </Button>
           </div>
         </form>
+        </FormProvider>
       </CardContent>
     </Card>
   );
