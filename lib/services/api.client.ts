@@ -50,10 +50,40 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor - handle common errors and log responses
+// --- Refresh token queue to handle concurrent 401s ---
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
+
+function processQueue(error: unknown, token: string | null = null) {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
+}
+
+function forceLogout() {
+  tokenManager.clearTokens();
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem("user");
+    } catch (_) {
+      // Ignore storage errors
+    }
+    window.location.href = "/login";
+  }
+}
+
+// Response interceptor - handle 401 with single-attempt refresh + queue
 apiClient.interceptors.response.use(
   (response) => {
-    // Log API response
     console.log("✅ API Response:", {
       status: response.status,
       statusText: response.statusText,
@@ -68,53 +98,69 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // Handle 401 - Unauthorized (token expired)
+    // Only handle 401 and only retry once
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+
+      // If a refresh is already in progress, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token: string) => {
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
+              resolve(apiClient(originalRequest));
+            },
+            reject,
+          });
+        });
+      }
+
+      isRefreshing = true;
 
       try {
         const refreshToken = tokenManager.getRefreshToken();
 
-        if (refreshToken) {
-          // Try to refresh token
-          console.log("🔄 401 detected - Attempting to refresh token...");
-          const response = await axios.post<{
-            accessToken: string;
-            refreshToken?: string;
-          }>(`${process.env.NEXT_PUBLIC_API_URL || ""}/auth/refresh`, {
-            refreshToken,
-          });
-
-          // CRITICAL: Immediately store the new tokens
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
-          tokenManager.setAuthToken(accessToken);
-          console.log("✅ New access token stored and will be used for retry");
-
-          // If API returns a new refresh token (token rotation), store it
-          if (newRefreshToken) {
-            tokenManager.setRefreshToken(newRefreshToken);
-            console.log("✅ New refresh token stored (token rotation)");
-          }
-
-          // Retry original request with new token
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          }
-
-          console.log("🔄 Retrying original request with new token...");
-          return apiClient(originalRequest);
-        } else {
-          console.warn("⚠️ No refresh token available, cannot refresh");
+        if (!refreshToken) {
+          console.warn("⚠️ No refresh token available, forcing logout");
+          processQueue(new Error("No refresh token"), null);
+          forceLogout();
+          return Promise.reject(error);
         }
+
+        console.log("🔄 401 detected — refreshing token...");
+        const response = await axios.post<{
+          accessToken: string;
+          refreshToken?: string;
+        }>(`${process.env.NEXT_PUBLIC_API_URL || ""}/auth/refresh`, {
+          refreshToken,
+        });
+
+        const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+        // Store new tokens
+        tokenManager.setAuthToken(accessToken);
+        if (newRefreshToken) {
+          tokenManager.setRefreshToken(newRefreshToken);
+        }
+        console.log("✅ Token refreshed successfully");
+
+        // Process queued requests with new token
+        processQueue(null, accessToken);
+
+        // Retry the original request
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        return apiClient(originalRequest);
       } catch (refreshError) {
-        console.error("❌ Token refresh failed in interceptor:", refreshError);
-        // Refresh failed, logout user
-        tokenManager.clearTokens();
-
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
+        console.error("❌ Token refresh failed:", refreshError);
+        processQueue(refreshError, null);
+        forceLogout();
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
