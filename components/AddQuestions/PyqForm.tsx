@@ -143,14 +143,8 @@ export function AddPyqForm() {
           year: new Date().getFullYear(),
         },
       };
-
-      console.log("📤 Sending question to API:", payload);
-
       // Call the API
       const createdQuestion = await questionService.createQuestion(payload);
-
-      console.log("✅ Question created successfully:", createdQuestion);
-
       toast.success("Question saved to question bank successfully!", {
         description: `Question ID: ${createdQuestion._id}`,
         position: "bottom-center",

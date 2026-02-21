@@ -22,15 +22,8 @@ export const counsellorService = {
    */
   createCounsellor: async (
     payload: CreateCounsellorPayload,
-  ): Promise<Counsellor> => {
-    console.log(
-      "🚀 [counsellorService] POST /counsellors",
-      JSON.stringify(payload, null, 2),
-    );
-    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
-      await apiClient.post("/counselling/counsellors", payload);
-    console.log("✅ [counsellorService] Response:", response.data);
-    return response.data.data || response.data;
+  ): Promise<Counsellor> => {    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
+      await apiClient.post("/counselling/counsellors", payload);    return response.data.data || response.data;
   },
 
   /**
@@ -39,12 +32,8 @@ export const counsellorService = {
    */
   getCounsellors: async (
     params?: GetCounsellorsParams,
-  ): Promise<Counsellor[]> => {
-    console.log("🚀 [counsellorService] GET /counsellors", params);
-    const response: AxiosResponse<CounsellorsResponse | Counsellor[]> =
+  ): Promise<Counsellor[]> => {    const response: AxiosResponse<CounsellorsResponse | Counsellor[]> =
       await apiClient.get("/counselling/counsellors", { params });
-    console.log("✅ [counsellorService] Response:", response.data);
-
     // Handle both { success, data } and direct array responses
     if (Array.isArray(response.data)) {
       return response.data;
@@ -56,12 +45,8 @@ export const counsellorService = {
    * Get a single counsellor by ID
    * GET /counsellors/:id
    */
-  getCounsellorById: async (id: string): Promise<Counsellor> => {
-    console.log(`🚀 [counsellorService] GET /counselling/counsellors/${id}`);
-    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
-      await apiClient.get(`/counselling/counsellors/${id}`);
-    console.log("✅ [counsellorService] Response:", response.data);
-    return response.data.data || response.data;
+  getCounsellorById: async (id: string): Promise<Counsellor> => {    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
+      await apiClient.get(`/counselling/counsellors/${id}`);    return response.data.data || response.data;
   },
 
   /**
@@ -71,26 +56,15 @@ export const counsellorService = {
   updateCounsellor: async (
     id: string,
     payload: UpdateCounsellorPayload,
-  ): Promise<Counsellor> => {
-    console.log(
-      `🚀 [counsellorService] PATCH /counselling/counsellors/${id}`,
-      JSON.stringify(payload, null, 2),
-    );
-    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
-      await apiClient.patch(`/counselling/counsellors/${id}`, payload);
-    console.log("✅ [counsellorService] Response:", response.data);
-    return response.data.data || response.data;
+  ): Promise<Counsellor> => {    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
+      await apiClient.patch(`/counselling/counsellors/${id}`, payload);    return response.data.data || response.data;
   },
 
   /**
    * Delete a counsellor
    * DELETE /counsellors/:id
    */
-  deleteCounsellor: async (id: string): Promise<void> => {
-    console.log(`🚀 [counsellorService] DELETE /counselling/counsellors/${id}`);
-    await apiClient.delete(`/counselling/counsellors/${id}`);
-    console.log("✅ [counsellorService] Counsellor deleted");
-  },
+  deleteCounsellor: async (id: string): Promise<void> => {    await apiClient.delete(`/counselling/counsellors/${id}`);  },
 
   /**
    * Get counsellors by exam type
@@ -112,12 +86,8 @@ export const counsellorService = {
   updateCounsellorRating: async (
     id: string,
     newRating: number,
-  ): Promise<Counsellor> => {
-    console.log(`🚀 [counsellorService] PATCH /counselling/counsellors/${id}/rating`, { newRating });
-    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
-      await apiClient.patch(`/counselling/counsellors/${id}/rating`, { newRating });
-    console.log("✅ [counsellorService] Response:", response.data);
-    return response.data.data || response.data;
+  ): Promise<Counsellor> => {    const response: AxiosResponse<{ success: boolean; data: Counsellor }> =
+      await apiClient.patch(`/counselling/counsellors/${id}/rating`, { newRating });    return response.data.data || response.data;
   },
 };
 

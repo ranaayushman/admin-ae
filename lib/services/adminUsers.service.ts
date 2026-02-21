@@ -47,10 +47,7 @@ export const adminUsersService = {
       
       const response = await apiClient.get<AdminUsersResponse>('/users/admin/all', {
         params: { page, limit }
-      });
-      
-      console.log('✅ Admin users fetched successfully');
-      
+      });      
       return response.data.data;
     } catch (error) {
       throw new Error(handleApiError(error));

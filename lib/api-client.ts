@@ -14,9 +14,7 @@ const getRefreshToken = (): string | null => {
 
 const setAuthToken = (token: string): void => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('auth_token', token);
-    console.log('🔐 Auth token updated');
-  }
+    localStorage.setItem('auth_token', token);  }
 };
 
 const setRefreshToken = (token: string): void => {
@@ -29,9 +27,7 @@ const clearTokens = (): void => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    console.log('🔓 All tokens cleared');
-  }
+    localStorage.removeItem('user');  }
 };
 
 // Create axios instance
@@ -66,15 +62,11 @@ const processQueue = (error: any, token: string | null = null) => {
 const refreshAuthToken = async (): Promise<string | null> => {
   const refreshToken = getRefreshToken();
   
-  if (!refreshToken) {
-    console.log('❌ No refresh token available');
-    return null;
+  if (!refreshToken) {    return null;
   }
 
   for (let attempt = 1; attempt <= MAX_REFRESH_RETRIES; attempt++) {
-    try {
-      console.log(`🔄 Token refresh attempt ${attempt}/${MAX_REFRESH_RETRIES}`);
-      
+    try {      
       const response = await axios.post(
         `${API_BASE_URL}/auth/refresh`,
         { refreshToken }
@@ -88,9 +80,7 @@ const refreshAuthToken = async (): Promise<string | null> => {
         setAuthToken(token);
         if (newRefreshToken) {
           setRefreshToken(newRefreshToken);
-        }
-        console.log(`✅ Token refreshed successfully on attempt ${attempt}`);
-        return token;
+        }        return token;
       }
     } catch (error) {
       console.error(`❌ Token refresh attempt ${attempt} failed:`, error);
@@ -100,24 +90,17 @@ const refreshAuthToken = async (): Promise<string | null> => {
         await new Promise(resolve => setTimeout(resolve, 500 * attempt));
       }
     }
-  }
-
-  console.log('❌ All token refresh attempts failed');
-  return null;
+  }  return null;
 };
 
 // Request interceptor - add auth token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = getAuthToken();
-    
-    console.log("🔐 [apiClient] Interceptor - Token found?", !!token); // DEBUG
+    const token = getAuthToken(); // DEBUG
 
     if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log("🔐 [apiClient] Attached Authorization Header"); // DEBUG
-    } else {
-      console.warn("⚠️ [apiClient] No token attached to request"); // DEBUG
+      config.headers.Authorization = `Bearer ${token}`; // DEBUG
+    } else { // DEBUG
     }
     
     return config;
@@ -171,9 +154,7 @@ apiClient.interceptors.response.use(
           processQueue(new Error('Token refresh failed'), null);
           clearTokens();
           
-          if (typeof window !== 'undefined') {
-            console.log('🚪 Redirecting to login page...');
-            window.location.href = '/';
+          if (typeof window !== 'undefined') {            window.location.href = '/';
           }
           return Promise.reject(error);
         }

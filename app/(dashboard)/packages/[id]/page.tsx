@@ -75,9 +75,7 @@ export default function PackageDetailPage() {
           const status = await fetchWaitlistStatus(packageId);
           setWaitlistStatus(status);
         } catch {
-          // Silently fail - waitlist status is optional
-          console.log("Waitlist status not available");
-        } finally {
+          // Silently fail - waitlist status is optional        } finally {
           setLoadingWaitlist(false);
         }
       };

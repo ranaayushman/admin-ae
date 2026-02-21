@@ -28,10 +28,7 @@ export const questionService = {
    */
   createQuestion: async (data: CreateQuestionPayload): Promise<Question> => {
     try {
-      const response = await apiClient.post<CreateQuestionResponse>('/questions', data);
-      
-      console.log('✅ Question created successfully:', response.data);
-      
+      const response = await apiClient.post<CreateQuestionResponse>('/questions', data);      
       // Handle different response structures:
       // API might return { data: question } or { data: { data: question, message: string } }
       // or even just the question directly
@@ -84,10 +81,7 @@ export const questionService = {
         page: number;
         limit: number;
         totalPages?: number;
-      }>(url);
-      
-      console.log('✅ Questions fetched successfully:', response.data);
-      
+      }>(url);      
       // Extract data and pagination from the response
       const { data: questions, total, page, limit, totalPages } = response.data;
       
@@ -115,10 +109,7 @@ export const questionService = {
    */
   getQuestionById: async (id: string): Promise<Question> => {
     try {
-      const response = await apiClient.get(`/questions/${id}`);
-      
-      console.log('✅ Question fetched successfully:', response.data);
-      
+      const response = await apiClient.get(`/questions/${id}`);      
       // The API might return the question directly or nested under 'data'
       const questionData = response.data.data || response.data;
       return normalizeQuestion(questionData);
@@ -134,10 +125,7 @@ export const questionService = {
    */
   updateQuestion: async (id: string, data: Partial<CreateQuestionPayload>): Promise<Question> => {
     try {
-      const response = await apiClient.patch<CreateQuestionResponse>(`/questions/${id}`, data);
-      
-      console.log('✅ Question updated successfully:', response.data);
-      
+      const response = await apiClient.patch<CreateQuestionResponse>(`/questions/${id}`, data);      
       // Handle different response structures
       const questionData = (response.data as any).data || response.data;
       return normalizeQuestion(questionData);
@@ -153,10 +141,7 @@ export const questionService = {
    */
   deleteQuestion: async (id: string): Promise<void> => {
     try {
-      await apiClient.delete(`/questions/${id}`);
-      
-      console.log('✅ Question deleted successfully');
-    } catch (error) {
+      await apiClient.delete(`/questions/${id}`);    } catch (error) {
       throw new Error(handleApiError(error));
     }
   },

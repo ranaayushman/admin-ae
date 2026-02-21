@@ -67,10 +67,7 @@ export default function DashboardPage() {
       title: bannerTitle,
       isActive: true,
       updatedAt: new Date().toISOString(),
-    };
-
-    console.log("Banner Update Payload:", payload);
-    toast.success("Banner updated successfully", {
+    };    toast.success("Banner updated successfully", {
       description: "Check console for payload",
     });
 
