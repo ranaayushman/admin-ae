@@ -88,7 +88,7 @@ export const authService = {
       const apiToken = response.data.data.token;
       
       if (!apiToken) {
-        console.error('⚠️ No token in API response:', response.data);
+        console.error('No token in API response');
         throw new Error('No authentication token received from server');
       }
       

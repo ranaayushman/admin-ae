@@ -96,11 +96,10 @@ const refreshAuthToken = async (): Promise<string | null> => {
 // Request interceptor - add auth token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = getAuthToken(); // DEBUG
+    const token = getAuthToken();
 
     if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`; // DEBUG
-    } else { // DEBUG
+      config.headers.Authorization = `Bearer ${token}`;
     }
     
     return config;
