@@ -143,6 +143,15 @@ export default function QuestionDetailPage() {
                   content={question.questionText}
                   className="text-base"
                 />
+                {question.questionImageUrl && (
+                  <div className="mt-4">
+                    <img
+                      src={question.questionImageUrl}
+                      alt="Question Diagram"
+                      className="max-h-64 rounded-lg border bg-white object-contain"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -154,9 +163,10 @@ export default function QuestionDetailPage() {
                 <div className="space-y-2">
                   {question.options.map((opt, i) => {
                     const letter = String.fromCharCode(65 + i);
-                    const isCorrect = question.correctAnswer.includes(letter);
-                    // Handle both object { text: string } and plain string formats
+                    const isCorrect = question.correctAnswer?.includes(letter) || question.correctAnswers?.includes(letter);
+                    // Handle both object { text: string, imageUrl?: string } and plain string formats
                     const optionText = typeof opt === "string" ? opt : opt.text;
+                    const optionImageUrl = typeof opt === "object" ? opt.imageUrl : undefined;
                     return (
                       <div
                         key={i}
@@ -167,11 +177,18 @@ export default function QuestionDetailPage() {
                       >
                         <div className="flex items-start gap-2">
                           <span className="font-medium min-w-6">{letter}.</span>
-                          <div className="flex-1">
+                          <div className="flex-1 space-y-2">
                             <QuestionRenderer
                               content={optionText}
                               className="text-sm"
                             />
+                            {optionImageUrl && (
+                              <img
+                                src={optionImageUrl}
+                                alt={`Option ${letter}`}
+                                className="max-h-40 rounded border bg-white object-contain mt-2"
+                              />
+                            )}
                           </div>
                           {isCorrect && (
                             <span className="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded">
@@ -193,6 +210,15 @@ export default function QuestionDetailPage() {
                   content={question.solutionText}
                   className="text-base"
                 />
+                {question.solutionImageUrl && (
+                  <div className="mt-4">
+                    <img
+                      src={question.solutionImageUrl}
+                      alt="Solution Diagram"
+                      className="max-h-64 rounded-lg border bg-white object-contain"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

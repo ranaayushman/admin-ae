@@ -59,6 +59,8 @@ export interface ApiError {
 export interface QuestionOption {
   text: string;
   isCorrect?: boolean;
+  imageUrl?: string;
+  imageBase64?: string; // Keep for backward compatibility/payload
 }
 
 export interface QuestionMetadata {
@@ -71,12 +73,16 @@ export interface Question {
   category: string;
   chapter: string;
   topic: string;
+  questionType?: 'single-correct' | 'multi-correct' | 'integer' | 'numerical';
   questionText: string;
-  options: { text: string; imageBase64?: string }[];
-  correctAnswer: string;
+  options: { text: string; imageBase64?: string; imageUrl?: string }[];
+  correctAnswer?: string;
+  correctAnswers?: string[];
   solutionText: string;
   questionImageBase64?: string | null;
+  questionImageUrl?: string | null;
   solutionImageBase64?: string | null;
+  solutionImageUrl?: string | null;
   difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'easy' | 'medium' | 'hard';
   metadata: QuestionMetadata;
   createdAt: string;

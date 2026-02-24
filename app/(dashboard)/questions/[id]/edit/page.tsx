@@ -36,11 +36,13 @@ export default function QuestionEditPage() {
   const [editData, setEditData] = useState({
     questionText: "",
     solutionText: "",
-    options: [] as { text: string; isCorrect: boolean }[],
+    options: [] as { text: string; isCorrect: boolean; imageUrl?: string }[],
     difficulty: "MEDIUM",
     marks: 4,
     chapter: "",
     topic: "",
+    questionImageUrl: null as string | null,
+    solutionImageUrl: null as string | null,
   });
 
   useEffect(() => {
@@ -54,9 +56,12 @@ export default function QuestionEditPage() {
             const letter = String.fromCharCode(65 + idx);
             // Handle both object { text: string } and plain string formats
             const optionText = typeof opt === "string" ? opt : opt.text;
+            const optionImageUrl = typeof opt === "object" ? opt.imageUrl : undefined;
+            const isCorrect = data.correctAnswer?.includes(letter) || data.correctAnswers?.includes(letter) || false;
             return {
               text: optionText,
-              isCorrect: data.correctAnswer.includes(letter),
+              imageUrl: optionImageUrl,
+              isCorrect,
             };
           })
           : [];
@@ -69,6 +74,8 @@ export default function QuestionEditPage() {
           marks: data.metadata.marks,
           chapter: data.chapter,
           topic: data.topic,
+          questionImageUrl: data.questionImageUrl || null,
+          solutionImageUrl: data.solutionImageUrl || null,
         });
       } catch (err: any) {
         console.error("❌ Failed:", err);
@@ -94,7 +101,7 @@ export default function QuestionEditPage() {
           .filter((v) => v !== null);
         correctAnswer = correctIndices.join(",");
       } else {
-        correctAnswer = question.correctAnswer; // Keep original for non-MCQ
+        correctAnswer = question.correctAnswer || question.correctAnswers?.join(",") || "A"; // Keep original for non-MCQ
       }
 
       await questionService.updateQuestion(id, {
@@ -179,6 +186,16 @@ export default function QuestionEditPage() {
                   setEditData({ ...editData, questionText: val })
                 }
               />
+              {editData.questionImageUrl && (
+                <div className="mt-4">
+                  <Label className="text-sm font-medium mb-2 block text-muted-foreground">Current Image:</Label>
+                  <img
+                    src={editData.questionImageUrl}
+                    alt="Question Diagram"
+                    className="max-h-64 rounded-lg border bg-white object-contain"
+                  />
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -219,6 +236,15 @@ export default function QuestionEditPage() {
                           65 + index
                         )} text`}
                       />
+                      {option.imageUrl && (
+                        <div className="mt-2">
+                          <img
+                            src={option.imageUrl}
+                            alt={`Option ${String.fromCharCode(65 + index)}`}
+                            className="max-h-32 rounded border bg-white object-contain"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -238,6 +264,16 @@ export default function QuestionEditPage() {
                   setEditData({ ...editData, solutionText: val })
                 }
               />
+              {editData.solutionImageUrl && (
+                <div className="mt-4">
+                  <Label className="text-sm font-medium mb-2 block text-muted-foreground">Current Solution Image:</Label>
+                  <img
+                    src={editData.solutionImageUrl}
+                    alt="Solution Diagram"
+                    className="max-h-64 rounded-lg border bg-white object-contain"
+                  />
+                </div>
+              )}
             </div>
 
             <Separator />
