@@ -178,6 +178,7 @@ export const papersService = {
   // Get papers with advanced filtering
   getPapers: async (params: {
     category?: PaperCategory;
+    type?: string;
     board?: BoardName;
     subject?: string;
     year?: number;

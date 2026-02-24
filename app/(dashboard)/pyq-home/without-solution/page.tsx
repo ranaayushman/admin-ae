@@ -98,23 +98,18 @@ export default function PyqWithoutSolutionPage() {
   const fetchPapers = async () => {
     setLoading(true);
     try {
-      // Fetch all competitive exam PYQs (JEE Main, Advanced, NEET, WBJEE)
+      // Fetch all competitive exam PYQs filtered by type=no-solution at the API level
       const [jeeMain, jeeAdvanced, neet, wbjee] = await Promise.all([
-        papersService.getPapers({ category: "jee-main" }),
-        papersService.getPapers({ category: "jee-advanced" }),
-        papersService.getPapers({ category: "neet" }),
-        papersService.getPapers({ category: "wbjee" }),
+        papersService.getPapers({ category: "jee-main", type: "no-solution" }),
+        papersService.getPapers({ category: "jee-advanced", type: "no-solution" }),
+        papersService.getPapers({ category: "neet", type: "no-solution" }),
+        papersService.getPapers({ category: "wbjee", type: "no-solution" }),
       ]);
 
       // Combine all papers
       const allPyqPapers = [...jeeMain, ...jeeAdvanced, ...neet, ...wbjee];
 
-      // Filter for papers WITHOUT solutions
-      const withoutSolutions = allPyqPapers.filter(
-        (p: Paper) => !p.solutionDriveLink && !p.videoSolutionLink
-      );
-
-      setPapers(withoutSolutions);
+      setPapers(allPyqPapers);
     } catch (error) {
       console.error("Failed to fetch papers:", error);
       toast.error("Failed to load papers");
