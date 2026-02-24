@@ -46,9 +46,7 @@ export default function QuestionEditPage() {
   useEffect(() => {
     const fetchQuestion = async () => {
       try {
-        const data = await questionService.getQuestionById(id);
-        console.log("✅ Question loaded:", data);
-        setQuestion(data);
+        const data = await questionService.getQuestionById(id);        setQuestion(data);
 
         // Parse options from the question
         const parsedOptions = data.options

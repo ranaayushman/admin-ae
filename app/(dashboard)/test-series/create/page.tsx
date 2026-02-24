@@ -124,9 +124,6 @@ export default function CreateTestSeriesPage() {
         startDate: data.startDate,
         endDate: data.endDate,
       };
-
-      console.log("Creating test with payload:", payload);
-
       const result = await testService.createTest(payload);
 
       toast.success("Test created successfully!", {

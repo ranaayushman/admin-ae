@@ -52,9 +52,7 @@ export const authService = {
     try {
       const response = await apiClient.post<ApiRegisterResponse>('/auth/register', data);
       
-      // Success message from API
-      console.log('✅ Registration successful:', response.data.message);
-      
+      // Success message from API      
       // Map the API response to the AuthResponse format expected by the app
       const authResponse: AuthResponse = {
         user: {
@@ -84,15 +82,13 @@ export const authService = {
     try {
       const response = await apiClient.post<ApiLoginResponse>('/auth/login', credentials);
       
-      // Success message from API
-      console.log('✅ Login successful:', response.data.message);
-      
+      // Success message from API      
       // CRITICAL: API returns 'token' field but we need to map it correctly
       // Check if API response has the token field
       const apiToken = response.data.data.token;
       
       if (!apiToken) {
-        console.error('⚠️ No token in API response:', response.data);
+        console.error('No token in API response');
         throw new Error('No authentication token received from server');
       }
       
@@ -108,10 +104,7 @@ export const authService = {
         },
         token: apiToken,
         refreshToken: response.data.data.refreshToken,
-      };
-
-      console.log('🔐 Mapped auth response with token:', apiToken ? 'present' : 'MISSING');
-      return authResponse;
+      };      return authResponse;
     } catch (error) {
       throw new Error(handleApiError(error));
     }
@@ -139,10 +132,7 @@ export const authService = {
         dateOfBirth: savedUser?.dateOfBirth || '',
         createdAt: savedUser?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      };
-      
-      console.log('✅ Profile fetched successfully');
-      return user;
+      };      return user;
     } catch (error) {
       throw new Error(handleApiError(error));
     }
@@ -157,27 +147,18 @@ export const authService = {
    * - refreshToken: new refresh token (optional, if API rotates refresh tokens)
    */
   refreshToken: async (refreshToken: string): Promise<{ accessToken: string; refreshToken?: string }> => {
-    try {
-      console.log('🔄 Calling token refresh API...');
-      
+    try {      
       const response = await apiClient.post<{ accessToken: string; refreshToken?: string }>('/auth/refresh', {
         refreshToken,
-      });
-      
-      console.log('✅ Token refresh API successful');
-      
+      });      
       const { accessToken, refreshToken: newRefreshToken } = response.data;
       
       // CRITICAL: Immediately store the new access token
       // This ensures all subsequent requests use the new token
-      tokenManager.setAuthToken(accessToken);
-      console.log('🔐 New access token stored in memory');
-      
+      tokenManager.setAuthToken(accessToken);      
       // If API returns a new refresh token (token rotation), store it
       if (newRefreshToken) {
-        tokenManager.setRefreshToken(newRefreshToken);
-        console.log('🔐 New refresh token stored in memory (token rotation)');
-      }
+        tokenManager.setRefreshToken(newRefreshToken);      }
       
       return { 
         accessToken, 
@@ -196,9 +177,7 @@ export const authService = {
   logout: async (): Promise<void> => {
     try {
       // API uses Authorization header (added by interceptor), no body needed
-      const response = await apiClient.post<{ success: boolean; message: string }>('/auth/logout', {});
-      console.log('✅ Logout successful:', response.data.message);
-    } catch (error) {
+      const response = await apiClient.post<{ success: boolean; message: string }>('/auth/logout', {});    } catch (error) {
       // Ignore logout errors, still clear local storage
       console.error('⚠️ Logout API error (will still clear local storage):', error);
     }

@@ -59,9 +59,7 @@ export function useQuestions(options: UseQuestionsOptions = {}): UseQuestionsRet
     const cached = questionCache.get(cacheKey);
     
     // Check if cache is fresh
-    if (cached && Date.now() - cached.timestamp < cacheTime && !isRefetch) {
-      console.log('📦 Using cached data');
-      setData(cached.data);
+    if (cached && Date.now() - cached.timestamp < cacheTime && !isRefetch) {      setData(cached.data);
       setPagination(cached.pagination);
       setLoading(false);
       isInitialLoadRef.current = false;
@@ -69,23 +67,11 @@ export function useQuestions(options: UseQuestionsOptions = {}): UseQuestionsRet
     }
     
     // If we have cached data, show it while revalidating
-    if (cached && !isInitialLoadRef.current) {
-      console.log('🔄 Revalidating cached data');
-      setIsRefetching(true);
-    } else {
-      console.log('⏳ Initial load');
-      setLoading(true);
+    if (cached && !isInitialLoadRef.current) {      setIsRefetching(true);
+    } else {      setLoading(true);
     }
     
-    try {
-      console.log('🌐 Fetching questions from API...');
-      const response = await questionService.getQuestions(filters);
-      
-      console.log('✅ Got response:', {
-        questionCount: response.data.length,
-        pagination: response.pagination
-      });
-      
+    try {      const response = await questionService.getQuestions(filters);      
       if (!isMountedRef.current) return;
       
       // Update cache
@@ -169,29 +155,19 @@ export function useQuestion(options: UseQuestionOptions): UseQuestionReturn {
   const isMountedRef = useRef(true);
   
   const fetchQuestion = useCallback(async () => {
-    if (!enabled || !id) {
-      console.log('⏭️ Skipping fetch: enabled=', enabled, 'id=', id);
-      return;
+    if (!enabled || !id) {      return;
     }
     
     const cached = singleQuestionCache.get(id);
     
     // Check cache (2 min cache for single questions)
-    if (cached && Date.now() - cached.timestamp < 2 * 60 * 1000) {
-      console.log('📦 Using cached question:', id);
-      setData(cached.data);
+    if (cached && Date.now() - cached.timestamp < 2 * 60 * 1000) {      setData(cached.data);
       setLoading(false);
       return;
-    }
-    
-    console.log('🌐 Fetching question from API:', id);
-    setLoading(true);
+    }    setLoading(true);
     
     try {
-      const question = await questionService.getQuestionById(id);
-      
-      console.log('✅ Got question:', question._id);
-      
+      const question = await questionService.getQuestionById(id);      
       if (!isMountedRef.current) return;
       
       singleQuestionCache.set(id, {

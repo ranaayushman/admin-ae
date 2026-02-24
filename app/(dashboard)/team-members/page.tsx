@@ -160,9 +160,7 @@ export default function TeamMembersPage() {
 
   // Create new team member
   const onSubmit = async (data: TeamMemberFormValues) => {
-    try {
-      console.log("🚀 [onSubmit] Submitting team member...", data);
-      toast.info("Submitting...", { duration: 2000 });
+    try {      toast.info("Submitting...", { duration: 2000 });
 
       const payload: CreateTeamMemberPayload = {
         name: data.name,
@@ -172,13 +170,7 @@ export default function TeamMembersPage() {
         displayOrder: data.displayOrder,
         isActive: data.isActive,
       };
-
-      console.log("🚀 [onSubmit] Payload prepared:", payload);
-
-      const newMember = await teamService.createTeamMember(payload);
-
-      console.log("✅ [onSubmit] Success!");
-      toast.success("Team member added successfully!", {
+      const newMember = await teamService.createTeamMember(payload);      toast.success("Team member added successfully!", {
         description: `${newMember.name} has been added to the team.`,
       });
 
@@ -224,9 +216,7 @@ export default function TeamMembersPage() {
   const onEditSubmit = async (data: TeamMemberFormValues) => {
     if (!editingMember) return;
 
-    try {
-      console.log("🚀 [onEditSubmit] Updating team member...", data);
-      toast.info("Updating...", { duration: 2000 });
+    try {      toast.info("Updating...", { duration: 2000 });
 
       const payload: UpdateTeamMemberPayload = {
         name: data.name,
@@ -240,16 +230,10 @@ export default function TeamMembersPage() {
       if (editProfileImage && editProfileImage !== editingMember.image) {
         payload.imageBase64 = editProfileImage;
       }
-
-      console.log("🚀 [onEditSubmit] Payload prepared:", payload);
-
       const updatedMember = await teamService.updateTeamMember(
         editingMember._id,
         payload,
-      );
-
-      console.log("✅ [onEditSubmit] Success!");
-      toast.success("Team member updated successfully!", {
+      );      toast.success("Team member updated successfully!", {
         description: `${updatedMember.name} has been updated.`,
       });
 
@@ -271,12 +255,7 @@ export default function TeamMembersPage() {
 
     try {
       setIsDeleting(true);
-      console.log(`🚀 [handleDelete] Deleting ${deletingMember.name}...`);
-
-      await teamService.deleteTeamMember(deletingMember._id);
-
-      console.log("✅ [handleDelete] Success!");
-      toast.success("Team member deleted", {
+      await teamService.deleteTeamMember(deletingMember._id);      toast.success("Team member deleted", {
         description: `${deletingMember.name} has been removed from the team.`,
       });
 

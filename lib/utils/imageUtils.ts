@@ -21,19 +21,9 @@ export async function convertImageToBase64(file: File): Promise<string> {
         }
         
         // Log success with details
-        const sizeKB = Math.round(base64String.length / 1024);
-        console.log(`✅ Image converted to base64 successfully:`, {
-          fileName: file.name,
-          fileType: file.type,
-          originalSize: formatFileSize(file.size),
-          base64Size: `${sizeKB} KB`,
-          dataUriPrefix: base64String.substring(0, 30) + '...',
-        });
-        
+        const sizeKB = Math.round(base64String.length / 1024);        
         // Warn if base64 is very large (over 10MB)
-        if (base64String.length > 10 * 1024 * 1024) {
-          console.warn('⚠️ Base64 string is very large. Consider compressing the image.');
-        }
+        if (base64String.length > 10 * 1024 * 1024) {        }
         
         resolve(base64String);
       } else {

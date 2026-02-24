@@ -5,11 +5,7 @@ import axios, {
 } from "axios";
 import { tokenManager } from "@/lib/utils/tokenManager";
 
-if (!process.env.NEXT_PUBLIC_API_URL) {
-  console.warn(
-    "⚠️ NEXT_PUBLIC_API_URL is not set. Please configure it in your .env file."
-  );
-}
+if (!process.env.NEXT_PUBLIC_API_URL) {}
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -32,16 +28,6 @@ apiClient.interceptors.request.use(
     }
 
     // Log API request
-    console.log("🚀 API Request:", {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`,
-      headers: config.headers,
-      data: config.data,
-      token: token ? `${token.substring(0, 20)}...` : "none", // Log token prefix for debugging
-    });
-
     return config;
   },
   (error) => {
@@ -84,13 +70,6 @@ function forceLogout() {
 // Response interceptor - handle 401 with single-attempt refresh + queue
 apiClient.interceptors.response.use(
   (response) => {
-    console.log("✅ API Response:", {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.config.url,
-      data: response.data,
-    });
-
     return response;
   },
   async (error: AxiosError) => {
@@ -122,15 +101,10 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = tokenManager.getRefreshToken();
 
-        if (!refreshToken) {
-          console.warn("⚠️ No refresh token available, forcing logout");
-          processQueue(new Error("No refresh token"), null);
+        if (!refreshToken) {          processQueue(new Error("No refresh token"), null);
           forceLogout();
           return Promise.reject(error);
-        }
-
-        console.log("🔄 401 detected — refreshing token...");
-        const response = await axios.post<{
+        }        const response = await axios.post<{
           accessToken: string;
           refreshToken?: string;
         }>(`${process.env.NEXT_PUBLIC_API_URL || ""}/auth/refresh`, {
@@ -144,8 +118,6 @@ apiClient.interceptors.response.use(
         if (newRefreshToken) {
           tokenManager.setRefreshToken(newRefreshToken);
         }
-        console.log("✅ Token refreshed successfully");
-
         // Process queued requests with new token
         processQueue(null, accessToken);
 

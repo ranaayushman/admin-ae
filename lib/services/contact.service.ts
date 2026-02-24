@@ -10,14 +10,10 @@ export const contactService = {
   getContactInquiries: async (params?: {
     page?: number;
     limit?: number;
-  }): Promise<ContactInquiriesResponse> => {
-    console.log("🚀 [contactService] GET /contact", params);
-    const response: AxiosResponse<ContactInquiriesResponse> = await apiClient.get(
+  }): Promise<ContactInquiriesResponse> => {    const response: AxiosResponse<ContactInquiriesResponse> = await apiClient.get(
       "/contact",
       { params }
-    );
-    console.log("✅ [contactService] Response:", response.data);
-    return response.data;
+    );    return response.data;
   },
 };
 

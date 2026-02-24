@@ -73,17 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (!refreshToken) {
         throw new Error('No refresh token available');
-      }
-
-      console.log('🔄 Refreshing session...');
-      const response = await authService.refreshToken(refreshToken);
+      }      const response = await authService.refreshToken(refreshToken);
       
       // If API returns a new refresh token (token rotation), it's already stored by authService
-      if (response.refreshToken) {
-        console.log('✅ Session refreshed with new refresh token');
-      } else {
-        console.log('✅ Session refreshed with same refresh token');
-      }
+      if (response.refreshToken) {      } else {      }
     } catch (error) {
       console.error('❌ Session refresh failed:', error);
       // If refresh fails, logout user
@@ -98,10 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Update state and localStorage
       storage.set(STORAGE_KEYS.USER, updatedUser);
-      setUser(updatedUser);
-      
-      console.log('✅ Profile refreshed successfully');
-    } catch (error) {
+      setUser(updatedUser);    } catch (error) {
       throw error;
     }
   };

@@ -22,9 +22,7 @@ export const tokenManager = {
    * Set the authentication token
    */
   setAuthToken: (token: string): void => {
-    storage.set(STORAGE_KEYS.AUTH_TOKEN, token);
-    console.log('🔐 Auth token stored in localStorage');
-  },
+    storage.set(STORAGE_KEYS.AUTH_TOKEN, token);  },
 
   /**
    * Get the current refresh token
@@ -37,18 +35,14 @@ export const tokenManager = {
    * Set the refresh token
    */
   setRefreshToken: (token: string): void => {
-    storage.set(STORAGE_KEYS.REFRESH_TOKEN, token);
-    console.log('🔐 Refresh token stored in localStorage');
-  },
+    storage.set(STORAGE_KEYS.REFRESH_TOKEN, token);  },
 
   /**
    * Clear all tokens (used on logout)
    */
   clearTokens: (): void => {
     storage.remove(STORAGE_KEYS.AUTH_TOKEN);
-    storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
-    console.log('🔓 All tokens cleared from localStorage');
-  },
+    storage.remove(STORAGE_KEYS.REFRESH_TOKEN);  },
 
   /**
    * Check if user has valid tokens

@@ -241,10 +241,7 @@ export default function CounsellorsPage() {
       if (!profileImage) {
         toast.error("Please upload a profile image");
         return;
-      }
-
-      console.log("🚀 Creating counsellor...", data);
-      toast.info("Creating counsellor...");
+      }      toast.info("Creating counsellor...");
 
       const payload: CreateCounsellorPayload = {
         name: data.name,
@@ -323,9 +320,7 @@ export default function CounsellorsPage() {
   const onEditSubmit = async (data: CounsellorFormValues) => {
     if (!editingCounsellor) return;
 
-    try {
-      console.log("🚀 Updating counsellor...", data);
-      toast.info("Updating counsellor...");
+    try {      toast.info("Updating counsellor...");
 
       const payload: UpdateCounsellorPayload = {
         name: data.name,

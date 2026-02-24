@@ -180,12 +180,6 @@ export default function CreatePackagePage() {
         subjects: selectedSubjects,
         examTypes: [data.category],
       });
-
-      console.log(
-        "📦 Create Package Payload:",
-        JSON.stringify(apiPayload, null, 2)
-      );
-
       const response = await createPackage(apiPayload);
 
       toast.success("Package created successfully!", {

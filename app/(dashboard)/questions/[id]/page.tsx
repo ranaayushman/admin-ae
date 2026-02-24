@@ -25,9 +25,7 @@ export default function QuestionDetailPage() {
   useEffect(() => {
     const fetchQuestion = async () => {
       try {
-        const data = await questionService.getQuestionById(id);
-        console.log("✅ Question loaded:", data);
-        setQuestion(data);
+        const data = await questionService.getQuestionById(id);        setQuestion(data);
       } catch (err: any) {
         console.error("❌ Failed:", err);
         setError(err.message);

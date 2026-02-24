@@ -34,10 +34,7 @@ export const userService = {
    */
   getUserProfile: async (): Promise<User> => {
     try {
-      const response = await apiClient.get<UserProfileResponse>('/users/profile');
-      
-      console.log('✅ User profile fetched successfully');
-      
+      const response = await apiClient.get<UserProfileResponse>('/users/profile');      
       // Map API response to User type
       const user: User = {
         id: response.data.data.id,
@@ -72,10 +69,7 @@ export const userService = {
         phone: data.phone,
         dateOfBirth: data.dateOfBirth,
         profilePicture: data.profilePicture,
-      });
-      
-      console.log('✅ Profile updated successfully:', response.data.message);
-      
+      });      
       // Map API response to User type
       const user: User = {
         id: response.data.data.user.id,
@@ -107,10 +101,7 @@ export const userService = {
       }>('/users/change-password', {
         currentPassword,
         newPassword,
-      });
-      
-      console.log('✅ Password changed successfully:', response.data.message);
-      
+      });      
       return response.data;
     } catch (error) {
       throw new Error(handleApiError(error));

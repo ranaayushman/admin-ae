@@ -50,9 +50,6 @@ export default function QuestionsPage() {
         page,
         limit: 20,
       });
-
-      console.log("✅ Questions loaded:", response);
-
       setQuestions(response.data);
       setTotal(response.pagination.total);
       setTotalPages(response.pagination.totalPages);

@@ -81,10 +81,7 @@ export default function ManualEnrollmentPage() {
       studentInfo,
       enrolledAt: new Date().toISOString(),
       enrolledBy: "admin_id",
-    };
-
-    console.log("Manual Enrollment Payload:", payload);
-    toast.success("Student enrolled successfully!", {
+    };    toast.success("Student enrolled successfully!", {
       description: `Enrolled in package via ${data.enrollmentType} enrollment`,
     });
 
