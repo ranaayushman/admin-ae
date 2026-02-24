@@ -77,7 +77,7 @@ export interface Question {
   solutionText: string;
   questionImageBase64?: string | null;
   solutionImageBase64?: string | null;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'easy' | 'medium' | 'hard';
   metadata: QuestionMetadata;
   createdAt: string;
   updatedAt: string;
@@ -88,12 +88,13 @@ export interface CreateQuestionPayload {
   chapter: string;
   topic: string;
   questionText: string;
+  questionType?: 'single-correct' | 'multi-correct' | 'integer' | 'numerical';
   options: { text: string; imageBase64?: string }[];
   correctAnswer: string;
   solutionText: string;
   questionImageBase64?: string | null;
   solutionImageBase64?: string | null;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'easy' | 'medium' | 'hard';
   metadata: QuestionMetadata;
 }
 
@@ -120,7 +121,7 @@ export interface QuestionFilters {
   category?: string;
   chapter?: string;
   topic?: string;
-  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty?: 'EASY' | 'MEDIUM' | 'HARD' | 'easy' | 'medium' | 'hard';
   search?: string;
   page?: number;
   limit?: number;

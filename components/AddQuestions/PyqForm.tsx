@@ -27,6 +27,7 @@ const STORAGE_KEY = "pyq-form-metadata";
 interface SavedMetadata {
   subject: string;
   chapter: string;
+  topic: string;
   difficulty?: "easy" | "medium" | "hard";
 }
 
@@ -39,12 +40,12 @@ export function AddPyqForm() {
 
   // Load saved metadata from localStorage
   const loadSavedMetadata = (): SavedMetadata => {
-    if (typeof window === "undefined") return { subject: "", chapter: "" };
+    if (typeof window === "undefined") return { subject: "", chapter: "", topic: "" };
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : { subject: "", chapter: "" };
+      return saved ? JSON.parse(saved) : { subject: "", chapter: "", topic: "" };
     } catch {
-      return { subject: "", chapter: "" };
+      return { subject: "", chapter: "", topic: "" };
     }
   };
 
@@ -55,6 +56,7 @@ export function AddPyqForm() {
     defaultValues: {
       subject: savedMetadata.subject || "",
       chapter: savedMetadata.chapter || "",
+      topic: savedMetadata.topic || "",
       difficulty: savedMetadata.difficulty || undefined,
       question: "",
       solution: "",
@@ -83,6 +85,7 @@ export function AddPyqForm() {
   const solutionValue = watch("solution");
   const subject = watch("subject");
   const chapter = watch("chapter");
+  const topic = watch("topic");
   const difficulty = watch("difficulty");
 
   // Save metadata to localStorage whenever it changes
@@ -92,13 +95,14 @@ export function AddPyqForm() {
       const metadata: SavedMetadata = {
         subject: subject || "",
         chapter: chapter || "",
+        topic: topic || "",
         difficulty: difficulty as "easy" | "medium" | "hard" | undefined,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(metadata));
     } catch (error) {
       console.error("Failed to save metadata to localStorage:", error);
     }
-  }, [subject, chapter, difficulty]);
+  }, [subject, chapter, topic, difficulty]);
 
   // Handle file select for question / solution
   const handleFileUpload = (
@@ -154,10 +158,18 @@ export function AddPyqForm() {
         optionsArray = [];
       }
 
+      const typeMap: Record<string, string> = {
+        SINGLE_CORRECT: "single-correct",
+        MULTI_CORRECT: "multi-correct",
+        INTEGER: "integer",
+        NUMERICAL: "numerical",
+      };
+
       const payload: CreateQuestionPayload = {
         category: data.subject, // Form now sends correct lowercase values
         chapter: data.chapter,
-        topic: data.chapter, // Using chapter as topic for now
+        topic: data.topic,
+        questionType: typeMap[data.questionType] as any,
         questionText: data.question,
         options: optionsArray,
         correctAnswer,
@@ -181,6 +193,7 @@ export function AddPyqForm() {
       reset({
         subject: subject || "",
         chapter: chapter || "",
+        topic: topic || "",
         difficulty: difficulty as any,
         question: "",
         solution: "",

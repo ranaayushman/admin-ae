@@ -26,6 +26,7 @@ export const addPyqSchema = z
   .object({
     subject: z.string().min(1, "Subject is required"),
     chapter: z.string().min(1, "Chapter is required"),
+    topic: z.string().min(1, "Topic is required"),
     difficulty: z.enum(["easy", "medium", "hard"], {
       message: "Difficulty is required",
     }),
