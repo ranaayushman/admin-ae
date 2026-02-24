@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Input } from "../ui/input";
 import { questionService } from "@/lib/services/question.service";
 import { CreateQuestionPayload } from "@/lib/types";
+import { X } from "lucide-react";
 
 // LocalStorage keys
 const STORAGE_KEY = "pyq-form-metadata";
@@ -32,6 +33,9 @@ interface SavedMetadata {
 export function AddPyqForm() {
   const [questionType, setQuestionType] =
     useState<QuestionType>("SINGLE_CORRECT");
+
+  const [questionImageBase64, setQuestionImageBase64] = useState<string | null>(null);
+  const [solutionImageBase64, setSolutionImageBase64] = useState<string | null>(null);
 
   // Load saved metadata from localStorage
   const loadSavedMetadata = (): SavedMetadata => {
@@ -96,16 +100,37 @@ export function AddPyqForm() {
     }
   }, [subject, chapter, difficulty]);
 
-  const onSubmit = async (data: AddPyqFormValues) => {
+  // Handle file select for question / solution
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<string | null>>
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setter(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setter(null);
+      // Reset input value if empty
+      e.target.value = "";
+    }
+  };
+
+  const onSubmit = async (data: AddPyqFormValues) =>
+    {
     try {
       // Map form data to API payload format
       let correctAnswer = "";
-      let optionsArray: { text: string }[] = [];
+      let optionsArray: { text: string; imageBase64?: string }[] = [];
 
       if (data.questionType === "SINGLE_CORRECT" || data.questionType === "MULTI_CORRECT") {
-        // For MCQ questions - map to { text } format expected by backend
+        // For MCQ questions - map to { text, imageBase64 } format expected by backend
         optionsArray = data.options?.map((opt) => ({
           text: opt.text,
+          ...(opt.imageBase64 ? { imageBase64: opt.imageBase64 } : {})
         })) || [];
 
         if (data.questionType === "SINGLE_CORRECT") {
@@ -137,8 +162,8 @@ export function AddPyqForm() {
         options: optionsArray,
         correctAnswer,
         solutionText: data.solution,
-        questionImageBase64: null, // TODO: Handle image uploads
-        solutionImageBase64: null, // TODO: Handle image uploads
+        questionImageBase64: questionImageBase64,
+        solutionImageBase64: solutionImageBase64,
         difficulty: data.difficulty as any, // Form now sends lowercase
         metadata: {
           marks: 4, // Default marks, can be made configurable
@@ -174,6 +199,8 @@ export function AddPyqForm() {
         tolerance: "",
         roundingMode: undefined,
       });
+      setQuestionImageBase64(null);
+      setSolutionImageBase64(null);
     } catch (error: any) {
       console.error("❌ Error creating question:", error);
 
@@ -231,17 +258,25 @@ export function AddPyqForm() {
 
             <div className="space-y-1.5">
               <Label htmlFor="questionImages">
-                Attach diagrams / images (optional)
+                Attach diagram / image (optional)
               </Label>
               <Input
                 id="questionImages"
                 type="file"
-                multiple
                 accept="image/*"
+                onChange={(e) => handleFileUpload(e, setQuestionImageBase64)}
               />
               <p className="text-xs text-muted-foreground">
-                You can upload circuit diagrams, graphs, figures etc.
+                You can upload a circuit diagram, graph, figure etc.
               </p>
+              {questionImageBase64 && (
+                <div className="relative inline-block mt-2">
+                  <img src={questionImageBase64} alt="Question Diagram" className="h-20 rounded border bg-white" />
+                  <button type="button" onClick={() => setQuestionImageBase64(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-80 hover:opacity-100 flex items-center justify-center">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </div>
           </section>
 
@@ -284,17 +319,25 @@ export function AddPyqForm() {
 
             <div className="space-y-1.5">
               <Label htmlFor="solutionImages">
-                Attach images in solution (optional)
+                Attach image in solution (optional)
               </Label>
               <Input
                 id="solutionImages"
                 type="file"
-                multiple
                 accept="image/*"
+                onChange={(e) => handleFileUpload(e, setSolutionImageBase64)}
               />
               <p className="text-xs text-muted-foreground">
-                Add solution diagrams, graphs, or handwritten steps as images.
+                Add a solution diagram, graph, or handwritten steps as an image.
               </p>
+              {solutionImageBase64 && (
+                <div className="relative inline-block mt-2">
+                  <img src={solutionImageBase64} alt="Solution Diagram" className="h-20 rounded border bg-white" />
+                  <button type="button" onClick={() => setSolutionImageBase64(null)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-80 hover:opacity-100 flex items-center justify-center">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </div>
           </section>
 

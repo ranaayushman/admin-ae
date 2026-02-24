@@ -72,7 +72,7 @@ export interface Question {
   chapter: string;
   topic: string;
   questionText: string;
-  options: { text: string }[];
+  options: { text: string; imageBase64?: string }[];
   correctAnswer: string;
   solutionText: string;
   questionImageBase64?: string | null;
@@ -88,7 +88,7 @@ export interface CreateQuestionPayload {
   chapter: string;
   topic: string;
   questionText: string;
-  options: { text: string }[];
+  options: { text: string; imageBase64?: string }[];
   correctAnswer: string;
   solutionText: string;
   questionImageBase64?: string | null;

@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,7 +84,7 @@ export default function PyqWithoutSolutionPage() {
           cat,
           { papers: [], page: 1, totalPages: 1, hasNextPage: false, loading: true, loadingMore: false },
         ])
-      ) as Record<Category, CategoryState>
+      ) as unknown as Record<Category, CategoryState>
   );
 
   const {
@@ -284,12 +285,22 @@ export default function PyqWithoutSolutionPage() {
           </p>
         </div>
 
-        {/* ── Per-category paper lists ── */}
-        {CATEGORIES.map((cat) => {
-          const state = categoryState[cat];
-          return (
-            <Card key={cat} className="mb-4">
-              <CardHeader className="pb-3">
+        {/* ── Per-category paper lists (Tabs) ── */}
+        <Tabs defaultValue="jee-main" className="mb-6">
+          <TabsList className="mb-4">
+            {CATEGORIES.map((cat) => (
+              <TabsTrigger key={cat} value={cat}>
+                {CATEGORY_LABELS[cat]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {CATEGORIES.map((cat) => {
+            const state = categoryState[cat];
+            return (
+              <TabsContent key={cat} value={cat}>
+                <Card className="mb-4">
+                  <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg">{CATEGORY_LABELS[cat]}</CardTitle>
@@ -397,8 +408,10 @@ export default function PyqWithoutSolutionPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
           );
         })}
+        </Tabs>
 
         {/* ── Create Form ── */}
         <form
