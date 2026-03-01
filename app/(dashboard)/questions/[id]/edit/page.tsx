@@ -18,7 +18,7 @@ import {
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { questionService } from "@/lib/services/question.service";
-import { Question } from "@/lib/types";
+import { VALID_SUBJECTS_BY_CATEGORY, QuestionCategory, Question } from "@/lib/types";
 import { TiptapEditor } from "@/components/AddQuestions/TipTapEditor";
 import { OptionEditor } from "@/components/AddQuestions/OptionEditor";
 import { toast } from "sonner";
@@ -37,13 +37,19 @@ export default function QuestionEditPage() {
     questionText: "",
     solutionText: "",
     options: [] as { text: string; isCorrect: boolean; imageUrl?: string }[],
-    difficulty: "MEDIUM",
+    difficulty: "medium",
     marks: 4,
     chapter: "",
     topic: "",
+    category: "",
+    subject: "",
     questionImageUrl: null as string | null,
     solutionImageUrl: null as string | null,
   });
+
+  const availableSubjects = editData.category && VALID_SUBJECTS_BY_CATEGORY[editData.category as QuestionCategory] 
+    ? VALID_SUBJECTS_BY_CATEGORY[editData.category as QuestionCategory] 
+    : [];
 
   useEffect(() => {
     const fetchQuestion = async () => {
@@ -74,6 +80,8 @@ export default function QuestionEditPage() {
           marks: data.metadata.marks,
           chapter: data.chapter,
           topic: data.topic,
+          category: data.category || "",
+          subject: data.subject || "",
           questionImageUrl: data.questionImageUrl || null,
           solutionImageUrl: data.solutionImageUrl || null,
         });
@@ -109,10 +117,12 @@ export default function QuestionEditPage() {
         solutionText: editData.solutionText,
         options: editData.options.map((opt) => ({ text: opt.text })),
         correctAnswer,
-        difficulty: editData.difficulty as "EASY" | "MEDIUM" | "HARD",
+        difficulty: editData.difficulty as "easy" | "medium" | "hard",
         metadata: { marks: editData.marks, year: question.metadata.year },
         chapter: editData.chapter,
         topic: editData.topic,
+        category: editData.category,
+        subject: editData.subject as any,
       });
       toast.success("Question updated successfully!");
       router.push(`/questions/${id}`);
@@ -308,6 +318,53 @@ export default function QuestionEditPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">
+                    Category
+                  </label>
+                  <Select
+                    value={editData.category}
+                    onValueChange={(v) =>
+                      setEditData({ ...editData, category: v, subject: "" }) // reset subject on category change
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="neet">NEET</SelectItem>
+                      <SelectItem value="jee-main">JEE Main</SelectItem>
+                      <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
+                      <SelectItem value="boards">Boards</SelectItem>
+                      <SelectItem value="wbjee">WBJEE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Subject
+                  </label>
+                  <Select
+                    value={editData.subject}
+                    onValueChange={(v) =>
+                      setEditData({ ...editData, subject: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSubjects.map((sub) => (
+                        <SelectItem key={sub} value={sub}>
+                          {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                        </SelectItem>
+                      ))}
+                      {availableSubjects.length === 0 && (
+                        <SelectItem value="none" disabled>Select category first</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
                     Difficulty
                   </label>
                   <Select
@@ -320,9 +377,9 @@ export default function QuestionEditPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="EASY">Easy</SelectItem>
-                      <SelectItem value="MEDIUM">Medium</SelectItem>
-                      <SelectItem value="HARD">Hard</SelectItem>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

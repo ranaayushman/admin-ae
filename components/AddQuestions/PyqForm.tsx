@@ -25,6 +25,7 @@ import { X } from "lucide-react";
 const STORAGE_KEY = "pyq-form-metadata";
 
 interface SavedMetadata {
+  category: string;
   subject: string;
   chapter: string;
   topic: string;
@@ -40,12 +41,12 @@ export function AddPyqForm() {
 
   // Load saved metadata from localStorage
   const loadSavedMetadata = (): SavedMetadata => {
-    if (typeof window === "undefined") return { subject: "", chapter: "", topic: "" };
+    if (typeof window === "undefined") return { category: "", subject: "", chapter: "", topic: "" };
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : { subject: "", chapter: "", topic: "" };
+      return saved ? JSON.parse(saved) : { category: "", subject: "", chapter: "", topic: "" };
     } catch {
-      return { subject: "", chapter: "", topic: "" };
+      return { category: "", subject: "", chapter: "", topic: "" };
     }
   };
 
@@ -54,7 +55,8 @@ export function AddPyqForm() {
   const methods = useForm<AddPyqFormValues>({
     resolver: zodResolver(addPyqSchema),
     defaultValues: {
-      subject: savedMetadata.subject || "",
+      category: (savedMetadata.category as any) || "jee-main",
+      subject: (savedMetadata.subject as any) || undefined,
       chapter: savedMetadata.chapter || "",
       topic: savedMetadata.topic || "",
       difficulty: savedMetadata.difficulty || undefined,
@@ -83,6 +85,7 @@ export function AddPyqForm() {
 
   const questionValue = watch("question");
   const solutionValue = watch("solution");
+  const category = watch("category");
   const subject = watch("subject");
   const chapter = watch("chapter");
   const topic = watch("topic");
@@ -93,6 +96,7 @@ export function AddPyqForm() {
     if (typeof window === "undefined") return;
     try {
       const metadata: SavedMetadata = {
+        category: category || "",
         subject: subject || "",
         chapter: chapter || "",
         topic: topic || "",
@@ -102,7 +106,7 @@ export function AddPyqForm() {
     } catch (error) {
       console.error("Failed to save metadata to localStorage:", error);
     }
-  }, [subject, chapter, topic, difficulty]);
+  }, [category, subject, chapter, topic, difficulty]);
 
   // Handle file select for question / solution
   const handleFileUpload = (
@@ -160,13 +164,14 @@ export function AddPyqForm() {
 
       const typeMap: Record<string, string> = {
         SINGLE_CORRECT: "single-correct",
-        MULTI_CORRECT: "multi-correct",
+        MULTI_CORRECT: "multiple-correct",
         INTEGER: "integer",
         NUMERICAL: "numerical",
       };
 
       const payload: CreateQuestionPayload = {
-        category: data.subject, // Form now sends correct lowercase values
+        category: data.category,
+        subject: data.subject as any,
         chapter: data.chapter,
         topic: data.topic,
         questionType: typeMap[data.questionType] as any,
@@ -191,7 +196,8 @@ export function AddPyqForm() {
 
       // Reset form after successful submission, but keep metadata
       reset({
-        subject: subject || "",
+        category: (category as any) || "jee-main",
+        subject: (subject as any) || undefined,
         chapter: chapter || "",
         topic: topic || "",
         difficulty: difficulty as any,
