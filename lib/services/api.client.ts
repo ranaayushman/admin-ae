@@ -137,13 +137,10 @@ apiClient.interceptors.response.use(
     }
 
     // Handle other errors
-    console.error("❌ API Response Error:", {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      data: error.response?.data,
-      message: error.message,
-    });
+    console.error("❌ API Response Error:", error.response?.data || error.message);
+    if (error.response) {
+      console.error("Status:", error.response.status, "URL:", error.config?.url);
+    }
 
     return Promise.reject(error);
   }
@@ -151,17 +148,16 @@ apiClient.interceptors.response.use(
 
 export default apiClient;
 
-// Helper function to handle API errors
 export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ error: { message: string } }>;
-
-    if (axiosError.response) {
-      return axiosError.response.data?.error?.message || "An error occurred";
-    } else if (axiosError.request) {
+    const data = error.response?.data as any;
+    if (data) {
+      return data.message || data.error?.message || data.error || "An error occurred";
+    } else if (error.request) {
       return "No response from server. Please check your connection.";
     }
+    return error.message;
   }
 
-  return "An unexpected error occurred";
+  return error instanceof Error ? error.message : "An unexpected error occurred";
 };

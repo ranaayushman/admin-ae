@@ -54,6 +54,7 @@ export const questionService = {
    */
   getQuestions: async (filters?: {
     category?: string;
+    subject?: string;
     chapter?: string;
     topic?: string;
     difficulty?: string;
@@ -65,6 +66,7 @@ export const questionService = {
       const params = new URLSearchParams();
       
       if (filters?.category) params.append('category', filters.category);
+      if (filters?.subject) params.append('subject', filters.subject);
       if (filters?.chapter) params.append('chapter', filters.chapter);
       if (filters?.topic) params.append('topic', filters.topic);
       if (filters?.difficulty) params.append('difficulty', filters.difficulty);

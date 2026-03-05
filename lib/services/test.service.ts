@@ -73,6 +73,12 @@ export interface CreateTestPayload {
   negativeMarking: number;
   status: TestStatus;
   type: "mock" | "practice" | "previous_year";
+  difficulty?: string;
+  useExamPattern?: boolean;
+  subjects?: string[];
+  syllabus?: string[];
+  instructions?: string[];
+  sections?: any[];
   shuffleQuestions: boolean;
   startDate?: string;
   endDate?: string;
@@ -98,6 +104,12 @@ export interface Test {
   status: TestStatus;
   type: "mock" | "practice" | "previous_year";
   shuffleQuestions: boolean;
+  useExamPattern?: boolean;
+  difficulty?: string;
+  subjects?: string[];
+  syllabus?: string[];
+  instructions?: string[];
+  sections?: any[];
   startDate?: string;
   endDate?: string;
   createdBy: string;
@@ -135,6 +147,23 @@ export interface AutoCreateTestPayload {
   category: string;
   duration: number;
   questionCount: number;
+  /** When true, applies exam-pattern sections (e.g. 3×25q for JEE Main) */
+  useExamPattern?: boolean;
+  /** Optional filter: limit to a specific chapter */
+  chapter?: string;
+  /** Optional filter: easy | medium | hard */
+  difficulty?: string;
+}
+
+export interface ExamPatternSection {
+  name: string;
+  subject: string;
+  questionCount: number;
+  duration: number;
+  isTimed: boolean;
+  questionIds: string[];
+  marksPerCorrect: number;
+  negativeMarks: number;
 }
 
 export interface AutoCreateTestResponse {
@@ -147,9 +176,14 @@ export interface AutoCreateTestResponse {
     totalMarks?: number;
     duration: number;
     category: string;
-    type: "mock" | "practice" | "previous_year";
+    type: "mock" | "practice" | "previous_year" | "full-length";
     status: TestStatus;
     createdAt?: string;
+    /** Present when useExamPattern: true */
+    subjects?: string[];
+    sections?: ExamPatternSection[];
+    marksPerQuestion?: number;
+    negativeMarking?: number;
   };
 }
 
@@ -241,8 +275,8 @@ const extractPagination = (raw: unknown): Record<string, unknown> => {
 export const testService = {
   createTest: async (data: CreateTestPayload): Promise<Test> => {
     try {
-      const response = await apiClient.post<CreateTestResponse>("/tests", data);
-      return response.data.data;
+      const response = await apiClient.post<any>("/tests", data);
+      return response.data?.data || response.data;
     } catch (error) {
       throw new Error(handleApiError(error));
     }

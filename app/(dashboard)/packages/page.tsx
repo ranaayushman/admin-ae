@@ -13,8 +13,10 @@ import {
   Loader2,
   RefreshCw,
   Eye,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -316,7 +318,23 @@ export default function PackagesPage() {
         {packages.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {packages.map((pkg) => (
-              <Card key={pkg._id} className="hover:shadow-lg transition">
+              <Card key={pkg._id} className="hover:shadow-lg transition overflow-hidden">
+                {/* Package Image */}
+                {pkg.banner || pkg.thumbnail ? (
+                  <div className="relative h-40 w-full">
+                    <Image
+                      src={(pkg.banner ?? pkg.thumbnail)!}
+                      alt={pkg.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-40 w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                    <BookOpen className="w-12 h-12 text-blue-300" />
+                  </div>
+                )}
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">

@@ -43,6 +43,8 @@ const testSeriesSchema = z.object({
   status: z.enum(["draft", "published"]),
   type: z.enum(["mock", "practice", "previous_year"]),
   shuffleQuestions: z.boolean(),
+  useExamPattern: z.boolean(),
+  difficulty: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });
@@ -79,6 +81,8 @@ export default function CreateTestSeriesPage() {
       status: "draft",
       type: "mock",
       shuffleQuestions: true,
+      useExamPattern: false,
+      difficulty: "",
     },
   });
 
@@ -121,13 +125,15 @@ export default function CreateTestSeriesPage() {
         status: data.status,
         type: data.type,
         shuffleQuestions: data.shuffleQuestions,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        useExamPattern: data.useExamPattern,
+        difficulty: data.difficulty || undefined,
+        startDate: data.startDate || undefined,
+        endDate: data.endDate || undefined,
       };
       const result = await testService.createTest(payload);
 
       toast.success("Test created successfully!", {
-        description: `Test ID: ${result._id}`,
+        description: `Test ID: ${result?._id || (result as any)?.id || "Successfully created"}`,
       });
 
       // Reset and navigate
@@ -186,11 +192,21 @@ export default function CreateTestSeriesPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
-                  <Input
-                    id="category"
-                    placeholder="NEET, JEE, etc."
-                    {...register("category")}
-                  />
+                  <Select
+                    onValueChange={(value) => setValue("category", value)}
+                    defaultValue={watch("category")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="neet">NEET</SelectItem>
+                      <SelectItem value="jee-main">JEE Main</SelectItem>
+                      <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
+                      <SelectItem value="boards">Boards</SelectItem>
+                      <SelectItem value="wbjee">WBJEE</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {errors.category && (
                     <p className="text-sm text-red-600">
                       {errors.category.message}
@@ -294,6 +310,26 @@ export default function CreateTestSeriesPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="difficulty">Difficulty (Optional)</Label>
+                  <Select
+                    onValueChange={(value) => setValue("difficulty", value === "all" ? "" : value)}
+                    defaultValue={watch("difficulty") || "all"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Any difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any difficulty</SelectItem>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date (Optional)</Label>
                   <Input
                     id="startDate"
@@ -315,13 +351,26 @@ export default function CreateTestSeriesPage() {
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="shuffleQuestions"
-                  defaultChecked={true}
+                  checked={watch("shuffleQuestions")}
                   onCheckedChange={(checked) =>
                     setValue("shuffleQuestions", checked as boolean)
                   }
                 />
                 <Label htmlFor="shuffleQuestions" className="cursor-pointer">
                   Shuffle Questions
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="useExamPattern"
+                  checked={watch("useExamPattern")}
+                  onCheckedChange={(checked) =>
+                    setValue("useExamPattern", checked as boolean)
+                  }
+                />
+                <Label htmlFor="useExamPattern" className="cursor-pointer">
+                  Use Exam Pattern (Sections enabled)
                 </Label>
               </div>
             </CardContent>

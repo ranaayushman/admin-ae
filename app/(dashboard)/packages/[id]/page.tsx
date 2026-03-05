@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowLeft,
   Edit,
@@ -293,6 +294,22 @@ export default function PackageDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Banner / Thumbnail Image */}
+        {(pkg.banner || pkg.thumbnail) && (
+          <Card className="overflow-hidden">
+            <div className="relative h-56 w-full">
+              <Image
+                src={(pkg.banner ?? pkg.thumbnail)!}
+                alt={pkg.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 80vw"
+                priority
+              />
+            </div>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info */}
