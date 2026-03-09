@@ -325,11 +325,14 @@ export default function BoardsPyqPage() {
                         <SelectValue placeholder="Select subject" />
                       </SelectTrigger>
                       <SelectContent>
-                        {subjects.map((subject) => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
+                        {subjects.map((subject) => {
+                          const val = subject.toLowerCase().replace(/\s+/g, '-');
+                          return (
+                            <SelectItem key={val} value={val}>
+                              {subject}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     {errors.subject && (
@@ -510,11 +513,14 @@ export default function BoardsPyqPage() {
                         <SelectValue placeholder="Select subject" />
                       </SelectTrigger>
                       <SelectContent>
-                        {subjects.map((subject) => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
+                        {subjects.map((subject) => {
+                          const val = subject.toLowerCase().replace(/\s+/g, '-');
+                          return (
+                            <SelectItem key={val} value={val}>
+                              {subject}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     {errors.subject && (
@@ -673,7 +679,9 @@ export default function BoardsPyqPage() {
                         <TableCell>
                           <Badge variant="secondary">{paper.board}</Badge>
                         </TableCell>
-                        <TableCell>{paper.subject}</TableCell>
+                        <TableCell>
+                          {paper.subject ? paper.subject.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : ""}
+                        </TableCell>
                         <TableCell>{paper.year}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
