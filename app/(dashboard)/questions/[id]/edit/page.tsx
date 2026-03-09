@@ -22,6 +22,7 @@ import { VALID_SUBJECTS_BY_CATEGORY, QuestionCategory, Question } from "@/lib/ty
 import { TiptapEditor } from "@/components/AddQuestions/TipTapEditor";
 import { OptionEditor } from "@/components/AddQuestions/OptionEditor";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export default function QuestionEditPage() {
   const params = useParams();
@@ -54,7 +55,8 @@ export default function QuestionEditPage() {
   useEffect(() => {
     const fetchQuestion = async () => {
       try {
-        const data = await questionService.getQuestionById(id);        setQuestion(data);
+        const data = await questionService.getQuestionById(id);
+        setQuestion(data);
 
         // Parse options from the question
         const parsedOptions = data.options
@@ -86,7 +88,7 @@ export default function QuestionEditPage() {
           solutionImageUrl: data.solutionImageUrl || null,
         });
       } catch (err: any) {
-        console.error("❌ Failed:", err);
+        logger.error("❌ Failed to load question for edit", err);
         setError(err.message);
       } finally {
         setLoading(false);

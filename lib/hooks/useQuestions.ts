@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { questionService } from '@/lib/services/question.service';
-import { Question, QuestionFilters } from '@/lib/types';
+import { questionService } from "@/lib/services/question.service";
+import { Question, QuestionFilters } from "@/lib/types";
+import { logger } from "@/lib/logger";
 
 /**
  * Custom hook for fetching questions with caching and pagination
@@ -87,12 +88,12 @@ export function useQuestions(options: UseQuestionsOptions = {}): UseQuestionsRet
       isInitialLoadRef.current = false;
     } catch (err) {
       if (!isMountedRef.current) return;
-      
+
       setError(err as Error);
-      console.error('❌ Error fetching questions:', err);
+      logger.error("❌ Error fetching questions", err);
     } finally {
       if (!isMountedRef.current) return;
-      
+
       setLoading(false);
       setIsRefetching(false);
     }
@@ -179,12 +180,12 @@ export function useQuestion(options: UseQuestionOptions): UseQuestionReturn {
       setError(null);
     } catch (err) {
       if (!isMountedRef.current) return;
-      
+
       setError(err as Error);
-      console.error('❌ Error fetching question:', err);
+      logger.error("❌ Error fetching question", err);
     } finally {
       if (!isMountedRef.current) return;
-      
+
       setLoading(false);
     }
   }, [id, enabled]); // No state dependencies

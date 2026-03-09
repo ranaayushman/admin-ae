@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useState } from "react";
+import { logger } from "@/lib/logger";
 
 type NavItem = {
   name: string;
@@ -138,7 +139,7 @@ export default function Sidebar({
     try {
       await logout();
     } catch (error) {
-      console.error("Logout error:", error);
+      logger.error("Logout error", error);
     }
   };
 

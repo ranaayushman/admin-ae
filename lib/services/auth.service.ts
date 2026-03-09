@@ -1,7 +1,8 @@
-import apiClient, { handleApiError } from './api.client';
-import { LoginCredentials, RegisterData, AuthResponse, User } from '@/lib/types';
-import { storage, STORAGE_KEYS } from '@/lib/utils/storage';
-import { tokenManager } from '@/lib/utils/tokenManager';
+import apiClient, { handleApiError } from "./api.client";
+import { LoginCredentials, RegisterData, AuthResponse, User } from "@/lib/types";
+import { storage, STORAGE_KEYS } from "@/lib/utils/storage";
+import { tokenManager } from "@/lib/utils/tokenManager";
+import { logger } from "@/lib/logger";
 
 /**
  * Authentication Service
@@ -50,7 +51,7 @@ export const authService = {
    */
   register: async (data: RegisterData): Promise<AuthResponse> => {
     try {
-      const response = await apiClient.post<ApiRegisterResponse>('/auth/register', data);
+      const response = await apiClient.post<ApiRegisterResponse>("/auth/register", data);
       
       // Success message from API      
       // Map the API response to the AuthResponse format expected by the app
@@ -80,7 +81,7 @@ export const authService = {
    */
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await apiClient.post<ApiLoginResponse>('/auth/login', credentials);
+      const response = await apiClient.post<ApiLoginResponse>("/auth/login", credentials);
       
       // Success message from API      
       // CRITICAL: API returns 'token' field but we need to map it correctly
@@ -88,8 +89,8 @@ export const authService = {
       const apiToken = response.data.data.token;
       
       if (!apiToken) {
-        console.error('No token in API response');
-        throw new Error('No authentication token received from server');
+        logger.error("No token in API response");
+        throw new Error("No authentication token received from server");
       }
       
       // Map the API response to the AuthResponse format expected by the app
@@ -116,7 +117,11 @@ export const authService = {
    */
   getCurrentUser: async (): Promise<User> => {
     try {
-      const response = await apiClient.get<{ _id: string; identifier: string; roles: string[] }>('/auth/profile');
+      const response = await apiClient.get<{
+        _id: string;
+        identifier: string;
+        roles: string[];
+      }>("/auth/profile");
       
       // API returns minimal data (_id, identifier, roles)
       // Get full user data from localStorage if available
@@ -146,11 +151,16 @@ export const authService = {
    * - accessToken: new access token (always)
    * - refreshToken: new refresh token (optional, if API rotates refresh tokens)
    */
-  refreshToken: async (refreshToken: string): Promise<{ accessToken: string; refreshToken?: string }> => {
+  refreshToken: async (
+    refreshToken: string,
+  ): Promise<{ accessToken: string; refreshToken?: string }> => {
     try {      
-      const response = await apiClient.post<{ accessToken: string; refreshToken?: string }>('/auth/refresh', {
+      const response = await apiClient.post<{
+        accessToken: string;
+        refreshToken?: string;
+      }>("/auth/refresh", {
         refreshToken,
-      });      
+      });
       const { accessToken, refreshToken: newRefreshToken } = response.data;
       
       // CRITICAL: Immediately store the new access token
@@ -158,14 +168,15 @@ export const authService = {
       tokenManager.setAuthToken(accessToken);      
       // If API returns a new refresh token (token rotation), store it
       if (newRefreshToken) {
-        tokenManager.setRefreshToken(newRefreshToken);      }
+        tokenManager.setRefreshToken(newRefreshToken);
+      }
       
-      return { 
-        accessToken, 
-        refreshToken: newRefreshToken 
+      return {
+        accessToken,
+        refreshToken: newRefreshToken,
       };
     } catch (error) {
-      console.error('❌ Token refresh failed:', error);
+      logger.error("❌ Token refresh failed", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -177,9 +188,13 @@ export const authService = {
   logout: async (): Promise<void> => {
     try {
       // API uses Authorization header (added by interceptor), no body needed
-      const response = await apiClient.post<{ success: boolean; message: string }>('/auth/logout', {});    } catch (error) {
+      const response = await apiClient.post<{ success: boolean; message: string }>(
+        "/auth/logout",
+        {},
+      );
+    } catch (error) {
       // Ignore logout errors, still clear local storage
-      console.error('⚠️ Logout API error (will still clear local storage):', error);
+      logger.error("⚠️ Logout API error (will still clear local storage)", error);
     }
   },
 

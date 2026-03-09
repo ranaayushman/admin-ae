@@ -1,11 +1,23 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthResponse, LoginCredentials, RegisterData } from '@/lib/types';
-import { storage, STORAGE_KEYS } from '@/lib/utils/storage';
-import { tokenManager } from '@/lib/utils/tokenManager';
-import authService from '@/lib/services/auth.service';
-import { useRouter } from 'next/navigation';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import {
+  User,
+  AuthResponse,
+  LoginCredentials,
+  RegisterData,
+} from "@/lib/types";
+import { storage, STORAGE_KEYS } from "@/lib/utils/storage";
+import { tokenManager } from "@/lib/utils/tokenManager";
+import authService from "@/lib/services/auth.service";
+import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 interface AuthContextType {
   user: User | null;
@@ -40,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (credentials: LoginCredentials) => {
     try {
       const response: AuthResponse = await authService.login(credentials);
-      
+
       tokenManager.setAuthToken(response.token);
       tokenManager.setRefreshToken(response.refreshToken);
       storage.set(STORAGE_KEYS.USER, response.user);
@@ -55,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (data: RegisterData) => {
     try {
       const response: AuthResponse = await authService.register(data);
-      
+
       tokenManager.setAuthToken(response.token);
       tokenManager.setRefreshToken(response.refreshToken);
       storage.set(STORAGE_KEYS.USER, response.user);
@@ -70,15 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshSession = async () => {
     try {
       const refreshToken = tokenManager.getRefreshToken();
-      
+
       if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }      const response = await authService.refreshToken(refreshToken);
-      
+        throw new Error("No refresh token available");
+      }
+      const response = await authService.refreshToken(refreshToken);
+
       // If API returns a new refresh token (token rotation), it's already stored by authService
-      if (response.refreshToken) {      } else {      }
+      if (response.refreshToken) {
+      } else {
+      }
     } catch (error) {
-      console.error('❌ Session refresh failed:', error);
+      logger.error("❌ Session refresh failed", error);
       // If refresh fails, logout user
       logout();
       throw error;
@@ -88,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     try {
       const updatedUser = await authService.getCurrentUser();
-      
+
       // Update state and localStorage
       storage.set(STORAGE_KEYS.USER, updatedUser);
       setUser(updatedUser);    } catch (error) {
@@ -102,13 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.logout();
     } catch (error) {
       // Continue with logout even if API fails
-      console.error('Logout error:', error);
+      logger.error("Logout error", error);
     } finally {
       // Always clear tokens and local storage, then redirect
       tokenManager.clearTokens();
       storage.remove(STORAGE_KEYS.USER);
       setUser(null);
-      router.push('/login');
+      router.push("/login");
     }
   };
 

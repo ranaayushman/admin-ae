@@ -4,6 +4,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { tokenManager } from "@/lib/utils/tokenManager";
+import { logger } from "@/lib/logger";
 
 if (!process.env.NEXT_PUBLIC_API_URL) {}
 
@@ -31,7 +32,10 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error("❌ API Request Error:", error);
+    logger.error("❌ API Request Error", {
+      message: error instanceof Error ? error.message : String(error),
+      url: (error as AxiosError)?.config?.url,
+    });
     return Promise.reject(error);
   }
 );
@@ -127,7 +131,7 @@ apiClient.interceptors.response.use(
         }
         return apiClient(originalRequest);
       } catch (refreshError) {
-        console.error("❌ Token refresh failed:", refreshError);
+        logger.error("❌ Token refresh failed", refreshError);
         processQueue(refreshError, null);
         forceLogout();
         return Promise.reject(refreshError);
@@ -137,10 +141,11 @@ apiClient.interceptors.response.use(
     }
 
     // Handle other errors
-    console.error("❌ API Response Error:", error.response?.data || error.message);
-    if (error.response) {
-      console.error("Status:", error.response.status, "URL:", error.config?.url);
-    }
+    logger.error("❌ API Response Error", {
+      status: error.response?.status,
+      url: error.config?.url,
+      message: error.message,
+    });
 
     return Promise.reject(error);
   }

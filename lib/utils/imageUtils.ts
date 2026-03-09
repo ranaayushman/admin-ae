@@ -5,6 +5,7 @@
  * @param file - File object to convert
  * @returns Promise resolving to base64 string with data URI prefix (e.g., "data:image/jpeg;base64,...")
  */
+import { logger } from "@/lib/logger";
 export async function convertImageToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -14,27 +15,35 @@ export async function convertImageToBase64(file: File): Promise<string> {
         const base64String = reader.result;
         
         // Validate that it's a proper data URI
-        if (!base64String.startsWith('data:image/')) {
-          console.error('❌ Invalid base64 format:', base64String.substring(0, 50));
-          reject(new Error('Invalid base64 format: missing data URI prefix'));
+        if (!base64String.startsWith("data:image/")) {
+          logger.error("❌ Invalid base64 format", {
+            preview: base64String.substring(0, 50),
+          });
+          reject(
+            new Error("Invalid base64 format: missing data URI prefix"),
+          );
           return;
         }
         
         // Log success with details
-        const sizeKB = Math.round(base64String.length / 1024);        
+        const sizeKB = Math.round(base64String.length / 1024);
         // Warn if base64 is very large (over 10MB)
-        if (base64String.length > 10 * 1024 * 1024) {        }
+        if (base64String.length > 10 * 1024 * 1024) {
+          logger.warn("Image base64 size over 10MB", { sizeKB });
+        }
         
         resolve(base64String);
       } else {
-        console.error('❌ FileReader result is not a string:', typeof reader.result);
-        reject(new Error('Failed to convert image to base64'));
+        logger.error("❌ FileReader result is not a string", {
+          type: typeof reader.result,
+        });
+        reject(new Error("Failed to convert image to base64"));
       }
     };
     
     reader.onerror = (error) => {
-      console.error('❌ FileReader error:', error);
-      reject(new Error('Error reading file'));
+      logger.error("❌ FileReader error", error);
+      reject(new Error("Error reading file"));
     };
     
     reader.readAsDataURL(file);

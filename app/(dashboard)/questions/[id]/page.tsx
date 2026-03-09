@@ -11,6 +11,7 @@ import { Question } from "@/lib/types";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export default function QuestionDetailPage() {
   const params = useParams();
@@ -25,9 +26,10 @@ export default function QuestionDetailPage() {
   useEffect(() => {
     const fetchQuestion = async () => {
       try {
-        const data = await questionService.getQuestionById(id);        setQuestion(data);
+        const data = await questionService.getQuestionById(id);
+        setQuestion(data);
       } catch (err: any) {
-        console.error("❌ Failed:", err);
+        logger.error("❌ Failed to load question detail", err);
         setError(err.message);
       } finally {
         setLoading(false);

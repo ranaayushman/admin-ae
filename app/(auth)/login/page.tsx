@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/contexts/AuthContext';
-import { isValidEmail } from '@/lib/utils/validators';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { isValidEmail } from "@/lib/utils/validators";
+import { logger } from "@/lib/logger";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -28,15 +29,15 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!isValidEmail(email)) {
-      setError('Please enter a valid email address');
+      setError("Please enter a valid email address");
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
 
@@ -46,9 +47,10 @@ export default function LoginPage() {
       // Login successful - AuthContext will handle redirect
     } catch (err: any) {
       // Show the actual error message from the API
-      const errorMessage = err?.message || 'Login failed. Please check your credentials.';
+      const errorMessage =
+        err?.message || "Login failed. Please check your credentials.";
       setError(errorMessage);
-      console.error('Login error:', err);
+      logger.error("Login error", err);
     } finally {
       setLoading(false);
     }

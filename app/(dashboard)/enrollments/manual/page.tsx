@@ -28,7 +28,11 @@ import {
 import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { getPackages, Package } from "@/lib/services/package.service";
-import { adminUsersService, AdminUser } from "@/lib/services/adminUsers.service";
+import {
+  adminUsersService,
+  AdminUser,
+} from "@/lib/services/adminUsers.service";
+import { logger } from "@/lib/logger";
 
 export default function ManualEnrollmentPage() {
   const [packages, setPackages] = useState<Package[]>([]);
@@ -64,7 +68,7 @@ export default function ManualEnrollmentPage() {
         const res = await getPackages({ status: "active", limit: 100 });
         setPackages(res.data || []);
       } catch (err) {
-        console.error("Failed to fetch packages:", err);
+        logger.error("Failed to fetch packages", err);
         toast.error("Failed to load packages");
       } finally {
         setPackagesLoading(false);
@@ -82,7 +86,7 @@ export default function ManualEnrollmentPage() {
       // Search users by email using admin users endpoint
       const data = await adminUsersService.getAllUsers({ page: 1, limit: 50 });
       const match = data.users.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase()
+        (u) => u.email.toLowerCase() === email.toLowerCase(),
       );
 
       if (match) {
@@ -95,7 +99,7 @@ export default function ManualEnrollmentPage() {
         toast.error("No student found with that email address.");
       }
     } catch (err) {
-      console.error("Student lookup failed:", err);
+      logger.error("Student lookup failed", err);
       toast.error("Failed to search for student.");
     } finally {
       setSearching(false);
@@ -104,10 +108,11 @@ export default function ManualEnrollmentPage() {
 
   const onSubmit = (data: ManualEnrollmentFormValues) => {
     // TODO: Wire up to real enrollment API endpoint when available
-    console.log("Enrollment payload:", {
-      ...data,
-      studentId: studentInfo?._id,
-      enrolledAt: new Date().toISOString(),
+    logger.info("Enrollment submitted", {
+      enrollmentType: data.enrollmentType,
+      packageId: data.packageId,
+      customPrice: data.customPrice,
+      customValidity: data.customValidity,
     });
     toast.success("Student enrolled successfully!", {
       description: `Enrolled in package via ${data.enrollmentType} enrollment`,

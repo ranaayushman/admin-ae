@@ -24,6 +24,7 @@ import {
   getDashboardStats,
   DashboardStats,
 } from "@/lib/services/dashboard.service";
+import { logger } from "@/lib/logger";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -40,7 +41,7 @@ export default function DashboardPage() {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to load dashboard";
       setError(errorMessage);
-      console.error("Dashboard error:", err);
+      logger.error("Dashboard error", err);
     } finally {
       setLoading(false);
     }

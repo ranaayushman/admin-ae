@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { questionService } from "@/lib/services/question.service";
 import { Question, VALID_SUBJECTS_BY_CATEGORY, QuestionCategory } from "@/lib/types";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
+import { logger } from "@/lib/logger";
 
 export default function QuestionsPage() {
   // Direct state - no fancy hooks
@@ -51,9 +52,12 @@ export default function QuestionsPage() {
     try {
       const response = await questionService.getQuestions({
         category:
-          categoryFilter !== "all" ? categoryFilter.toLowerCase() : undefined,
-        subject: subjectFilter !== "all" ? subjectFilter as any : undefined,
-        difficulty: difficultyFilter !== "all" ? difficultyFilter : undefined,
+          categoryFilter !== "all"
+            ? categoryFilter.toLowerCase()
+            : undefined,
+        subject: subjectFilter !== "all" ? (subjectFilter as any) : undefined,
+        difficulty:
+          difficultyFilter !== "all" ? difficultyFilter : undefined,
         search: searchQuery || undefined,
         page,
         limit: 20,
@@ -62,7 +66,7 @@ export default function QuestionsPage() {
       setTotal(response.pagination.total);
       setTotalPages(response.pagination.totalPages);
     } catch (err: any) {
-      console.error("❌ Failed to load questions:", err);
+      logger.error("❌ Failed to load questions", err);
       setError(err.message || "Failed to load questions");
     } finally {
       setLoading(false);

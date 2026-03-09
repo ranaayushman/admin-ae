@@ -20,6 +20,7 @@ import { Input } from "../ui/input";
 import { questionService } from "@/lib/services/question.service";
 import { CreateQuestionPayload } from "@/lib/types";
 import { X } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 // LocalStorage keys
 const STORAGE_KEY = "pyq-form-metadata";
@@ -104,7 +105,7 @@ export function AddPyqForm() {
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(metadata));
     } catch (error) {
-      console.error("Failed to save metadata to localStorage:", error);
+      logger.error("Failed to save metadata to localStorage", error);
     }
   }, [category, subject, chapter, topic, difficulty]);
 
@@ -221,10 +222,12 @@ export function AddPyqForm() {
       setQuestionImageBase64(null);
       setSolutionImageBase64(null);
     } catch (error: any) {
-      console.error("❌ Error creating question:", error);
+      logger.error("❌ Error creating question", error);
 
       toast.error("Failed to save question", {
-        description: error?.message || "Please try again or check the console for details.",
+        description:
+          error?.message ||
+          "Please try again or check the console for details.",
         position: "bottom-center",
       });
     }

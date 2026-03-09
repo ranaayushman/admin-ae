@@ -1,5 +1,6 @@
-import apiClient, { handleApiError } from './api.client';
-import { CreateQuestionPayload, CreateQuestionResponse, Question } from '@/lib/types';
+import apiClient, { handleApiError } from "./api.client";
+import { CreateQuestionPayload, CreateQuestionResponse, Question } from "@/lib/types";
+import { logger } from "@/lib/logger";
 
 /**
  * Question Service
@@ -33,7 +34,7 @@ export const questionService = {
       // API might return { data: question } or { data: { data: question, message: string } }
       // or even just the question directly
       const questionData = (response.data as any).data || response.data;
-      
+
       // If questionData has _id, it's likely the question object
       if (questionData && ((questionData as any)._id || (questionData as any).id)) {
         return normalizeQuestion(questionData);
@@ -43,7 +44,7 @@ export const questionService = {
       // Return the normalized data anyway
       return normalizeQuestion(questionData);
     } catch (error) {
-      console.error('❌ Error creating question:', error);
+      logger.error("❌ Error creating question", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -75,7 +76,7 @@ export const questionService = {
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
       const queryString = params.toString();
-      const url = queryString ? `/questions?${queryString}` : '/questions';
+      const url = queryString ? `/questions?${queryString}` : "/questions";
 
       const response = await apiClient.get<{
         data: any[];
@@ -100,7 +101,7 @@ export const questionService = {
         },
       };
     } catch (error) {
-      console.error('❌ Error fetching questions:', error);
+      logger.error("❌ Error fetching questions", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -111,12 +112,12 @@ export const questionService = {
    */
   getQuestionById: async (id: string): Promise<Question> => {
     try {
-      const response = await apiClient.get(`/questions/${id}`);      
+      const response = await apiClient.get(`/questions/${id}`);
       // The API might return the question directly or nested under 'data'
       const questionData = response.data.data || response.data;
       return normalizeQuestion(questionData);
     } catch (error) {
-      console.error('❌ Error fetching question:', error);
+      logger.error("❌ Error fetching question", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -127,12 +128,12 @@ export const questionService = {
    */
   updateQuestion: async (id: string, data: Partial<CreateQuestionPayload>): Promise<Question> => {
     try {
-      const response = await apiClient.patch<CreateQuestionResponse>(`/questions/${id}`, data);      
+      const response = await apiClient.patch<CreateQuestionResponse>(`/questions/${id}`, data);
       // Handle different response structures
       const questionData = (response.data as any).data || response.data;
       return normalizeQuestion(questionData);
     } catch (error) {
-      console.error('❌ Error updating question:', error);
+      logger.error("❌ Error updating question", error);
       throw new Error(handleApiError(error));
     }
   },
