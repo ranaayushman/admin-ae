@@ -234,6 +234,14 @@ const normalizeListItem = (item: Record<string, unknown>): TestListItem => {
         ? item["totalQuestions"]
         : typeof item["totalQuestions"] === "string"
         ? Number(item["totalQuestions"])
+        : typeof item["questionCount"] === "number"
+        ? item["questionCount"]
+        : typeof item["questionCount"] === "string"
+        ? Number(item["questionCount"])
+        : typeof item["questionsCount"] === "number"
+        ? item["questionsCount"]
+        : typeof item["questionsCount"] === "string"
+        ? Number(item["questionsCount"])
         : undefined,
     questions,
   };

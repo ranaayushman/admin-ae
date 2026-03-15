@@ -94,7 +94,7 @@ export default function CreateTestSeriesPage() {
 
     const updated = [...selectedQuestions, newQuestion];
     setSelectedQuestions(updated);
-    setShowQuestionSelector(false);
+    // setShowQuestionSelector(false); // BUG: Don't close after adding
 
     toast.success("Question added to test");
   };
@@ -265,6 +265,7 @@ export default function CreateTestSeriesPage() {
                   <Input
                     id="negativeMarking"
                     type="number"
+                    step="any"
                     placeholder="-1"
                     {...register("negativeMarking", { valueAsNumber: true })}
                   />
