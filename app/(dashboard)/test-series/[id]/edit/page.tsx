@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { testSeriesSchema, type TestSeriesFormValues, type QuestionSelectionMode } from "@/lib/validations/test-series-schema";
-import { testService, type Question } from "@/lib/services/test.service";
+import { testService } from "@/lib/services/test.service";
+import { type Question } from "@/lib/types";
 
 // Subject mapping by category
 const SUBJECTS_BY_CATEGORY: Record<string, string[]> = {
@@ -69,7 +70,6 @@ export default function EditTestSeriesPage() {
       status: "draft",
       type: "mock",
       shuffleQuestions: false,
-      examPattern: false,
       questionSelectionMode: "random",
       questionDeliveryPolicy: "fixed-per-user",
       questionsPerUser: 100,
@@ -102,7 +102,6 @@ export default function EditTestSeriesPage() {
           status: test.status,
           type: test.type as "mock" | "practice" | "sample",
           shuffleQuestions: test.shuffleQuestions,
-          examPattern: test.examPattern ?? false,
           questionSelectionMode: (test.questionSelectionMode as QuestionSelectionMode) || "random",
           questionDeliveryPolicy: test.questionDeliveryPolicy || "fixed-per-user",
           questionsPerUser: test.questionsPerUser || 100,
@@ -115,9 +114,10 @@ export default function EditTestSeriesPage() {
         if (test.questions && test.questions.length > 0) {
           const hydrated = test.questions.map((q, i) => ({
             ...q,
+            _id: q.id,
             _serialNumber: i + 1,
           }));
-          setSelectedQuestions(hydrated);
+          setSelectedQuestions(hydrated as any);
         }
       } catch (error: unknown) {
         toast.error("Failed to load test details", {
@@ -198,7 +198,6 @@ export default function EditTestSeriesPage() {
         status: data.status,
         type: data.type,
         shuffleQuestions: data.shuffleQuestions,
-        examPattern: data.examPattern,
         questionSelectionMode: selectionMode,
         questionDeliveryPolicy: deliveryPolicy,
       };
@@ -274,7 +273,7 @@ export default function EditTestSeriesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Category *</Label>
-                  <Select onValueChange={(v) => setValue("category", v)} defaultValue={watch("category") || ""}>
+                  <Select onValueChange={(v) => setValue("category", v as any)} defaultValue={watch("category") || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -309,7 +308,7 @@ export default function EditTestSeriesPage() {
 
                 <div>
                   <Label>Status</Label>
-                  <Select onValueChange={(v) => setValue("status", v)} defaultValue={watch("status") || "draft"}>
+                  <Select onValueChange={(v) => setValue("status", v as any)} defaultValue={watch("status") || "draft"}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -324,7 +323,7 @@ export default function EditTestSeriesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Type</Label>
-                  <Select onValueChange={(v) => setValue("type", v)} defaultValue={watch("type") || "mock"}>
+                  <Select onValueChange={(v) => setValue("type", v as any)} defaultValue={watch("type") || "mock"}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -376,7 +375,7 @@ export default function EditTestSeriesPage() {
               {/* Delivery Policy */}
               <div>
                 <Label>Delivery Policy *</Label>
-                <Select value={deliveryPolicy} onValueChange={(v) => setValue("questionDeliveryPolicy", v)}>
+                <Select value={deliveryPolicy} onValueChange={(v) => setValue("questionDeliveryPolicy", v as any)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -450,7 +449,7 @@ export default function EditTestSeriesPage() {
                 <div className="space-y-4">
                   <div className="text-sm text-gray-600">
                     {selectionMode === "mixed"
-                      ? `Selected: ${selectedQuestions.length} / ${questionsPerUser} total (${questionsPerUser - selectedQuestions.length} will be randomly added)`
+                      ? `Selected: ${selectedQuestions.length} / ${questionsPerUser || 100} total (${(questionsPerUser || 100) - selectedQuestions.length} will be randomly added)`
                       : `Selected: ${selectedQuestions.length} questions`}
                   </div>
 
@@ -474,7 +473,7 @@ export default function EditTestSeriesPage() {
                           <div key={q._id} className="px-4 py-3 flex gap-4 items-center text-sm">
                             <div className="w-8 text-gray-600">{idx + 1}</div>
                             <div className="flex-1 text-gray-900">
-                              {q.question?.substring(0, 60)}...
+                              {q.questionText?.substring(0, 60)}...
                             </div>
                             <Button
                               type="button"
