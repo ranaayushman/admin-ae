@@ -88,6 +88,12 @@ export default function TestSeriesPage() {
     useExamPattern: false,
     chapter: "",
     difficulty: "",
+    questionSelectionMode: "random",
+    questionDeliveryPolicy: "fixed-per-user",
+    questionsPerUser: 50,
+    selectedQuestionIds: [],
+    ensureSubjectDistribution: false,
+    subjectQuestionCounts: {},
   });
 
   const [statusFilter, setStatusFilter] = useState("all");
@@ -196,6 +202,12 @@ export default function TestSeriesPage() {
         useExamPattern: autoCreateForm.useExamPattern,
         chapter: autoCreateForm.chapter?.trim() || undefined,
         difficulty: autoCreateForm.difficulty?.trim() || undefined,
+        questionSelectionMode: autoCreateForm.questionSelectionMode || "random",
+        questionDeliveryPolicy: autoCreateForm.questionDeliveryPolicy || "fixed-per-user",
+        questionsPerUser: Number(autoCreateForm.questionsPerUser) || Number(autoCreateForm.questionCount),
+        selectedQuestionIds: autoCreateForm.selectedQuestionIds || [],
+        ensureSubjectDistribution: autoCreateForm.ensureSubjectDistribution || false,
+        subjectQuestionCounts: autoCreateForm.subjectQuestionCounts || {},
       };
 
       await testService.autoCreateTest(payload);
@@ -209,6 +221,12 @@ export default function TestSeriesPage() {
         useExamPattern: false,
         chapter: "",
         difficulty: "",
+        questionSelectionMode: "random",
+        questionDeliveryPolicy: "fixed-per-user",
+        questionsPerUser: 50,
+        selectedQuestionIds: [],
+        ensureSubjectDistribution: false,
+        subjectQuestionCounts: {},
       });
       fetchTests();
     } catch (err) {
@@ -600,6 +618,74 @@ export default function TestSeriesPage() {
                   </Select>
                 </div>
               </div>
+
+              {/* Row 5: Question Selection Mode + Delivery Policy */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Question Selection Mode</label>
+                  <Select
+                    value={autoCreateForm.questionSelectionMode || "random"}
+                    onValueChange={(v) => setAutoCreateForm((p) => ({ ...p, questionSelectionMode: v as any }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="random">Random</SelectItem>
+                      <SelectItem value="selected">Selected</SelectItem>
+                      <SelectItem value="mixed">Mixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Delivery Policy</label>
+                  <Select
+                    value={autoCreateForm.questionDeliveryPolicy || "fixed-per-user"}
+                    onValueChange={(v) => setAutoCreateForm((p) => ({ ...p, questionDeliveryPolicy: v as any }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select policy" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed-per-user">Fixed Per User</SelectItem>
+                      <SelectItem value="fresh-each-attempt">Fresh Each Attempt</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 6: Questions Per User (for random and mixed modes) */}
+              {(autoCreateForm.questionSelectionMode === "random" || autoCreateForm.questionSelectionMode === "mixed") && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Questions Per User</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={autoCreateForm.questionsPerUser}
+                    onChange={(e) => setAutoCreateForm((p) => ({ ...p, questionsPerUser: Number(e.target.value) }))}
+                    placeholder="e.g. 150"
+                  />
+                </div>
+              )}
+
+              {/* Row 7: Subject Distribution (for random and mixed modes) */}
+              {(autoCreateForm.questionSelectionMode === "random" || autoCreateForm.questionSelectionMode === "mixed") && (
+                <div className="flex items-center gap-3 py-2 border rounded-lg px-4 bg-blue-50 border-blue-200">
+                  <Checkbox
+                    id="ensureSubjectDist"
+                    checked={!!autoCreateForm.ensureSubjectDistribution}
+                    onCheckedChange={(checked) => setAutoCreateForm((p) => ({ ...p, ensureSubjectDistribution: checked as boolean }))}
+                  />
+                  <div>
+                    <label htmlFor="ensureSubjectDist" className="text-sm font-medium text-blue-900 cursor-pointer">
+                      Ensure Subject Distribution
+                    </label>
+                    <p className="text-xs text-blue-600">
+                      Distribute questions evenly across subjects
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-2">
@@ -617,7 +703,9 @@ export default function TestSeriesPage() {
                   !autoCreateForm.title.trim() ||
                   !autoCreateForm.category.trim() ||
                   Number(autoCreateForm.questionCount) <= 0 ||
-                  Number(autoCreateForm.duration) <= 0
+                  Number(autoCreateForm.duration) <= 0 ||
+                  ((autoCreateForm.questionSelectionMode === "random" || autoCreateForm.questionSelectionMode === "mixed") &&
+                    Number(autoCreateForm.questionsPerUser) <= 0)
                 }
               >
                 {autoCreateLoading ? (

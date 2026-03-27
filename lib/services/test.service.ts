@@ -1,6 +1,8 @@
 import apiClient, { handleApiError } from "./api.client";
 
 export type TestStatus = "draft" | "published";
+export type QuestionSelectionMode = "random" | "selected" | "mixed";
+export type QuestionDeliveryPolicy = "fixed-per-user" | "fresh-each-attempt";
 
 // Admin endpoint response shape
 export interface AdminQuestionOption {
@@ -56,6 +58,13 @@ export interface AdminTestData {
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+  // New: Question selection mode and delivery policy
+  questionSelectionMode?: QuestionSelectionMode;
+  questionDeliveryPolicy?: QuestionDeliveryPolicy;
+  questionsPerUser?: number;
+  selectedQuestionIds?: string[];
+  ensureSubjectDistribution?: boolean;
+  subjectQuestionCounts?: Record<string, number>;
 }
 
 export interface AdminTestResponse {
@@ -67,7 +76,7 @@ export interface CreateTestPayload {
   title: string;
   description: string;
   category: string;
-  questions: string[];
+  questions?: string[];
   duration: number;
   marksPerQuestion: number;
   negativeMarking: number;
@@ -82,6 +91,13 @@ export interface CreateTestPayload {
   shuffleQuestions: boolean;
   startDate?: string;
   endDate?: string;
+  // New: Question selection mode and delivery policy
+  questionSelectionMode?: QuestionSelectionMode;
+  questionDeliveryPolicy?: QuestionDeliveryPolicy;
+  questionsPerUser?: number;
+  selectedQuestionIds?: string[];
+  ensureSubjectDistribution?: boolean;
+  subjectQuestionCounts?: Record<string, number>;
 }
 
 export interface Pagination {
@@ -146,13 +162,20 @@ export interface AutoCreateTestPayload {
   title: string;
   category: string;
   duration: number;
-  questionCount: number;
+  questionCount?: number;
   /** When true, applies exam-pattern sections (e.g. 3×25q for JEE Main) */
   useExamPattern?: boolean;
   /** Optional filter: limit to a specific chapter */
   chapter?: string;
   /** Optional filter: easy | medium | hard */
   difficulty?: string;
+  // New: Question selection mode and delivery policy
+  questionSelectionMode?: QuestionSelectionMode;
+  questionDeliveryPolicy?: QuestionDeliveryPolicy;
+  questionsPerUser?: number;
+  selectedQuestionIds?: string[];
+  ensureSubjectDistribution?: boolean;
+  subjectQuestionCounts?: Record<string, number>;
 }
 
 export interface ExamPatternSection {

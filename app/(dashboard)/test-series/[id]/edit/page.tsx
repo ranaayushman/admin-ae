@@ -1,18 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import Link from "next/link";
+import { ArrowLeft, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -22,57 +20,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { QuestionSelector } from "@/components/TestSeries/QuestionSelector";
-import { Question } from "@/lib/types";
-import { testService, AdminQuestion } from "@/lib/services/test.service";
-import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, ArrowLeft, Loader2 } from "lucide-react";
-import Link from "next/link";
-import { QuestionRenderer } from "@/components/QuestionRenderer";
+import { testSeriesSchema, type TestSeriesFormValues, type QuestionSelectionMode } from "@/lib/validations/test-series-schema";
+import { testService } from "@/lib/services/test.service";
+import { type Question } from "@/lib/types";
 
-// Validation schema
-const testSeriesSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  category: z.string().min(1, "Category is required"),
-  duration: z.number().min(1, "Duration must be at least 1 minute"),
-  marksPerQuestion: z.number().min(1, "Marks per question must be at least 1"),
-  negativeMarking: z.number(),
-  status: z.enum(["draft", "published"]),
-  type: z.enum(["mock", "practice", "previous_year"]),
-  shuffleQuestions: z.boolean(),
-  isPaid: z.boolean().optional(),
-  price: z.number().optional(),
-  packageId: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
+// Subject mapping by category
+const SUBJECTS_BY_CATEGORY: Record<string, string[]> = {
+  "jee-main": ["Physics", "Chemistry", "Mathematics"],
+  "jee-advanced": ["Physics", "Chemistry", "Mathematics"],
+  "neet": ["Physics", "Chemistry", "Botany", "Zoology"],
+  "wbjee": ["Physics", "Chemistry", "Mathematics"],
+  "boards": ["Physics", "Chemistry", "Mathematics", "Biology"],
+};
 
-type TestSeriesFormValues = z.infer<typeof testSeriesSchema>;
-
-// Adapter: AdminQuestion → pseudo-Question for the list UI
-interface SelectedQuestion {
-  _id: string;
-  order: number;
-  questionText: string;
-  questionType: string;
-  category?: string;
-  chapter?: string;
-  topic?: string;
-  difficulty?: string;
-  metadata: { marks: number };
-  // keep the rest for QuestionSelector compatibility
-  [key: string]: unknown;
+interface SelectedQuestion extends Question {
+  _serialNumber?: number;
 }
 
-function adminQuestionToSelected(q: AdminQuestion, order: number): SelectedQuestion {
-  return {
-    ...q,
-    _id: q.id, // admin endpoint uses `id`, not `_id`
-    order,
-    metadata: { marks: q.metadata?.marks ?? 4 },
-  };
+function getSubjectsForCategory(category: string): string[] {
+  return SUBJECTS_BY_CATEGORY[category] || [];
 }
 
 export default function EditTestSeriesPage() {
@@ -82,36 +48,44 @@ export default function EditTestSeriesPage() {
 
   const [selectedQuestions, setSelectedQuestions] = useState<SelectedQuestion[]>([]);
   const [showQuestionSelector, setShowQuestionSelector] = useState(false);
-  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const {
     register,
     handleSubmit,
     watch,
+    formState: { errors },
     setValue,
-    formState: { errors, isSubmitting },
     reset,
   } = useForm<TestSeriesFormValues>({
-    resolver: zodResolver(testSeriesSchema),
+    resolver: zodResolver(testSeriesSchema) as any,
     defaultValues: {
       title: "",
       description: "",
       category: "",
       duration: 180,
       marksPerQuestion: 4,
-      negativeMarking: -1,
+      negativeMarking: -1 as any,
       status: "draft",
       type: "mock",
-      shuffleQuestions: true,
-      isPaid: false,
-      price: 0,
-      packageId: "",
-    },
+      shuffleQuestions: false,
+      questionSelectionMode: "random",
+      questionDeliveryPolicy: "fixed-per-user",
+      questionsPerUser: 100,
+      ensureSubjectDistribution: false,
+      subjectQuestionCounts: {} as any,
+      selectedQuestionIds: [],
+    } as any,
   });
 
-  // ──────────────────────────────────────────────
-  // Fetch test data from GET /tests/:id/admin
-  // ──────────────────────────────────────────────
+  const selectionMode = watch("questionSelectionMode");
+  const deliveryPolicy = watch("questionDeliveryPolicy");
+  const questionsPerUser = watch("questionsPerUser");
+  const ensureSubjectDistribution = watch("ensureSubjectDistribution");
+  const category = watch("category");
+
+  // Load test data on mount
   useEffect(() => {
     const fetchTestDetails = async () => {
       if (!testId) return;
@@ -126,97 +100,138 @@ export default function EditTestSeriesPage() {
           marksPerQuestion: test.marksPerQuestion,
           negativeMarking: test.negativeMarking,
           status: test.status,
-          type: (test.type as "mock" | "practice" | "previous_year") ?? "mock",
+          type: test.type as "mock" | "practice" | "sample",
           shuffleQuestions: test.shuffleQuestions,
-          isPaid: test.isPaid ?? false,
-          price: test.price ?? 0,
-          packageId: test.packageId ?? "",
-        });
+          questionSelectionMode: (test.questionSelectionMode as QuestionSelectionMode) || "random",
+          questionDeliveryPolicy: test.questionDeliveryPolicy || "fixed-per-user",
+          questionsPerUser: test.questionsPerUser || 100,
+          ensureSubjectDistribution: test.ensureSubjectDistribution ?? false,
+          subjectQuestionCounts: test.subjectQuestionCounts || {},
+          selectedQuestionIds: test.selectedQuestionIds || [],
+        } as any);
 
-        // Questions come back as full objects from the admin endpoint
+        // Load questions if available
         if (test.questions && test.questions.length > 0) {
-          const hydrated = test.questions.map((q, i) =>
-            adminQuestionToSelected(q, i + 1)
-          );
-          setSelectedQuestions(hydrated);
+          const hydrated = test.questions.map((q, i) => ({
+            ...q,
+            _id: q.id,
+            _serialNumber: i + 1,
+          }));
+          setSelectedQuestions(hydrated as any);
         }
       } catch (error: unknown) {
         toast.error("Failed to load test details", {
           description: error instanceof Error ? error.message : "Unknown error",
         });
       } finally {
-        setLoadingInitial(false);
+        setIsLoading(false);
       }
     };
     fetchTestDetails();
   }, [testId, reset]);
 
-  // ──────────────────────────────────────────────
-  // Question list handlers
-  // ──────────────────────────────────────────────
-  const handleAddQuestion = (question: Question) => {
-    const newQuestion: SelectedQuestion = {
-      ...question,
-      _id: question._id,
-      questionType: (question as unknown as { questionType?: string }).questionType ?? "single-correct",
-      order: selectedQuestions.length + 1,
-      metadata: { marks: (question.metadata as { marks?: number })?.marks ?? 4 },
+  const modeInfo = useMemo(() => {
+    const modes: Record<QuestionSelectionMode, { title: string; description: string }> = {
+      random: {
+        title: "Random Selection",
+        description: "Automatically select questions randomly from the bank. Optionally enforce subject distribution.",
+      },
+      selected: {
+        title: "Manual Selection",
+        description: "Manually choose specific questions. Same questions delivered to each user.",
+      },
+      mixed: {
+        title: "Mixed Selection",
+        description: "Combine manual selection with random questions. Fixed questions + random questions from bank.",
+      },
     };
-    setSelectedQuestions([...selectedQuestions, newQuestion]);
-    // setShowQuestionSelector(false); // BUG: Don't close after adding
-    toast.success("Question added to test");
-  };
+    return modes[selectionMode as QuestionSelectionMode];
+  }, [selectionMode]);
 
-  const handleRemoveQuestion = (index: number) => {
-    const updated = selectedQuestions
-      .filter((_, i) => i !== index)
-      .map((q, i) => ({ ...q, order: i + 1 }));
-    setSelectedQuestions(updated);
-  };
-
-  // ──────────────────────────────────────────────
-  // Submit → PATCH /tests/:id/admin
-  // ──────────────────────────────────────────────
-  const onSubmit = async (data: TestSeriesFormValues) => {
-    if (selectedQuestions.length === 0) {
-      toast.error("Please add at least one question");
-      return;
+  const handleAddQuestion = (question: Question) => {
+    if (!selectedQuestions.find((q) => q._id === question._id)) {
+      setSelectedQuestions([...selectedQuestions, { ...question, _serialNumber: selectedQuestions.length + 1 }]);
+      setValue("selectedQuestionIds", [...(watch("selectedQuestionIds") || []), question._id]);
     }
+  };
 
+  const handleRemoveQuestion = (questionId: string) => {
+    const updated = selectedQuestions.filter((q) => q._id !== questionId);
+    setSelectedQuestions(updated.map((q, idx) => ({ ...q, _serialNumber: idx + 1 })));
+    setValue(
+      "selectedQuestionIds",
+      updated.map((q) => q._id)
+    );
+  };
+
+  const onSubmit = async (data: TestSeriesFormValues | any) => {
+    setSubmitError(null);
     try {
-      const payload = {
+      // Mode-specific validation
+      if (selectionMode === "random" && !questionsPerUser) {
+        setSubmitError("Questions per user is required for random mode");
+        return;
+      }
+      if (selectionMode === "selected" && selectedQuestions.length === 0) {
+        setSubmitError("Please select at least one question for selected mode");
+        return;
+      }
+      if (selectionMode === "mixed") {
+        if (selectedQuestions.length === 0) {
+          setSubmitError("Please select at least one question for mixed mode");
+          return;
+        }
+        if (!questionsPerUser || questionsPerUser <= selectedQuestions.length) {
+          setSubmitError("Total questions must be greater than selected questions in mixed mode");
+          return;
+        }
+      }
+
+      // Build payload based on mode
+      const payload: any = {
         title: data.title,
         description: data.description,
         category: data.category,
-        questions: selectedQuestions.map((q) => q._id),
-        duration: data.duration,
-        marksPerQuestion: data.marksPerQuestion,
-        negativeMarking: data.negativeMarking,
+        duration: Number(data.duration),
+        marksPerQuestion: Number(data.marksPerQuestion),
+        negativeMarking: Number(data.negativeMarking),
         status: data.status,
         type: data.type,
         shuffleQuestions: data.shuffleQuestions,
-        ...(data.isPaid !== undefined && { isPaid: data.isPaid }),
-        ...(data.price !== undefined && data.price > 0 && { price: data.price }),
-        ...(data.packageId && { packageId: data.packageId }),
-        ...(data.startDate && { startDate: data.startDate }),
-        ...(data.endDate && { endDate: data.endDate }),
+        questionSelectionMode: selectionMode,
+        questionDeliveryPolicy: deliveryPolicy,
       };
 
-      await testService.updateTestAdmin(testId, payload);
+      if (selectionMode === "random") {
+        payload.questionsPerUser = Number(questionsPerUser);
+        if (ensureSubjectDistribution) {
+          payload.ensureSubjectDistribution = true;
+          payload.subjectQuestionCounts = data.subjectQuestionCounts || {};
+        }
+      } else if (selectionMode === "selected") {
+        payload.selectedQuestionIds = selectedQuestions.map((q) => q._id);
+        payload.questions = selectedQuestions;
+      } else if (selectionMode === "mixed") {
+        payload.questionsPerUser = Number(questionsPerUser);
+        payload.selectedQuestionIds = selectedQuestions.map((q) => q._id);
+        payload.questions = selectedQuestions;
+        if (ensureSubjectDistribution) {
+          payload.ensureSubjectDistribution = true;
+          payload.subjectQuestionCounts = data.subjectQuestionCounts || {};
+        }
+      }
 
+      await testService.updateTestAdmin(testId, payload);
       toast.success("Test updated successfully!");
       router.push("/test-series");
-    } catch (error: unknown) {
-      toast.error("Failed to update test", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update test";
+      setSubmitError(message);
+      toast.error("Failed to update test", { description: message });
     }
   };
 
-  // ──────────────────────────────────────────────
-  // Loading state
-  // ──────────────────────────────────────────────
-  if (loadingInitial) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
@@ -226,135 +241,74 @@ export default function EditTestSeriesPage() {
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Edit Test</h1>
-            <p className="text-gray-500 mt-1">
-              Update existing test details and questions
-            </p>
-          </div>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-3">
           <Link href="/test-series">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4" />
-              Back to Tests
             </Button>
           </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Edit Test Series</h1>
+            <p className="text-gray-500 mt-1">Update test details and settings</p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* ── Basic Details ── */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Details</CardTitle>
-              <CardDescription>
-                Update the basic information for this test
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Test Title *</Label>
-                  <Input
-                    id="title"
-                    placeholder="JEE Main 2025 Mock Test 1"
-                    {...register("title")}
-                  />
-                  {errors.title && (
-                    <p className="text-sm text-red-600">{errors.title.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Input
-                    id="category"
-                    placeholder="NEET, JEE, JEE_MAIN, etc."
-                    {...register("category")}
-                  />
-                  {errors.category && (
-                    <p className="text-sm text-red-600">{errors.category.message}</p>
-                  )}
-                </div>
+          {/* Basic Details Card */}
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Basic Details</h2>
+            <div className="space-y-4">
+              <div>
+                <Label>Title *</Label>
+                <Input {...register("title")} placeholder="e.g. JEE Main Test 1" />
+                {errors.title && <p className="text-red-600 text-sm">{errors.title.message}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <textarea
-                  id="description"
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="Full length mock test covering Physics, Chemistry, and Mathematics"
-                  {...register("description")}
-                />
-                {errors.description && (
-                  <p className="text-sm text-red-600">{errors.description.message}</p>
-                )}
+              <div>
+                <Label>Description</Label>
+                <Input {...register("description")} placeholder="Test description" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Category *</Label>
+                  <Select onValueChange={(v) => setValue("category", v as any)} defaultValue={watch("category") || ""}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jee-main">JEE Main</SelectItem>
+                      <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
+                      <SelectItem value="neet">NEET</SelectItem>
+                      <SelectItem value="wbjee">WBJEE</SelectItem>
+                      <SelectItem value="boards">Boards</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.category && <p className="text-red-600 text-sm">{errors.category.message}</p>}
+                </div>
+
+                <div>
+                  <Label>Duration (minutes) *</Label>
+                  <Input {...register("duration", { valueAsNumber: true })} type="number" min="1" />
+                  {errors.duration && <p className="text-red-600 text-sm">{errors.duration.message}</p>}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (minutes) *</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    {...register("duration", { valueAsNumber: true })}
-                  />
-                  {errors.duration && (
-                    <p className="text-sm text-red-600">{errors.duration.message}</p>
-                  )}
+                <div>
+                  <Label>Marks Per Question *</Label>
+                  <Input {...register("marksPerQuestion", { valueAsNumber: true })} type="number" min="1" />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="marksPerQuestion">Marks Per Question *</Label>
-                  <Input
-                    id="marksPerQuestion"
-                    type="number"
-                    {...register("marksPerQuestion", { valueAsNumber: true })}
-                  />
-                  {errors.marksPerQuestion && (
-                    <p className="text-sm text-red-600">
-                      {errors.marksPerQuestion.message}
-                    </p>
-                  )}
+                <div>
+                  <Label>Negative Marking</Label>
+                  <Input {...register("negativeMarking", { valueAsNumber: true })} type="number" step="0.25" />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="negativeMarking">Negative Marking</Label>
-                  <Input
-                    id="negativeMarking"
-                    type="number"
-                    step="any"
-                    placeholder="-1"
-                    {...register("negativeMarking", { valueAsNumber: true })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Test Type *</Label>
-                  <Select
-                    onValueChange={(value) => setValue("type", value as TestSeriesFormValues["type"])}
-                    value={watch("type")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mock">Mock Test</SelectItem>
-                      <SelectItem value="practice">Practice Test</SelectItem>
-                      <SelectItem value="previous_year">Previous Year</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status *</Label>
-                  <Select
-                    onValueChange={(value) => setValue("status", value as TestSeriesFormValues["status"])}
-                    value={watch("status")}
-                  >
+                <div>
+                  <Label>Status</Label>
+                  <Select onValueChange={(v) => setValue("status", v as any)} defaultValue={watch("status") || "draft"}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -367,221 +321,201 @@ export default function EditTestSeriesPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date (Optional)</Label>
-                  <Input
-                    id="startDate"
-                    type="datetime-local"
-                    {...register("startDate")}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date (Optional)</Label>
-                  <Input
-                    id="endDate"
-                    type="datetime-local"
-                    {...register("endDate")}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="shuffleQuestions"
-                  checked={watch("shuffleQuestions")}
-                  onCheckedChange={(checked) =>
-                    setValue("shuffleQuestions", checked as boolean)
-                  }
-                />
-                <Label htmlFor="shuffleQuestions" className="cursor-pointer">
-                  Shuffle Questions
-                </Label>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* ── Pricing / Package ── */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing & Package</CardTitle>
-              <CardDescription>
-                Configure payment settings for this test
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isPaid"
-                  checked={watch("isPaid") ?? false}
-                  onCheckedChange={(checked) =>
-                    setValue("isPaid", checked as boolean)
-                  }
-                />
-                <Label htmlFor="isPaid" className="cursor-pointer">
-                  Paid Test
-                </Label>
-              </div>
-
-              {watch("isPaid") && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price (₹)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      placeholder="1999"
-                      {...register("price", { valueAsNumber: true })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="packageId">Package ID</Label>
-                    <Input
-                      id="packageId"
-                      placeholder="jee-main-2025-complete-season-1"
-                      {...register("packageId")}
-                    />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ── Questions ── */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Questions ({selectedQuestions.length})</CardTitle>
-                  <CardDescription>
-                    Manage questions for this test
-                  </CardDescription>
+                  <Label>Type</Label>
+                  <Select onValueChange={(v) => setValue("type", v as any)} defaultValue={watch("type") || "mock"}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mock">Mock Test</SelectItem>
+                      <SelectItem value="practice">Practice</SelectItem>
+                      <SelectItem value="sample">Sample Paper</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button
-                  type="button"
-                  onClick={() => setShowQuestionSelector(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Question
-                </Button>
+
+                <div className="flex items-center gap-2 mt-7">
+                  <Checkbox {...register("shuffleQuestions")} id="shuffle" />
+                  <Label htmlFor="shuffle" className="font-normal cursor-pointer">
+                    Shuffle Questions
+                  </Label>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              {selectedQuestions.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p>No questions added yet</p>
-                  <p className="text-sm mt-1">
-                    Click &quot;Add Question&quot; to select from question bank
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="text-sm text-gray-600 mb-4">
-                    Total Marks:{" "}
-                    {selectedQuestions.length * watch("marksPerQuestion")}
-                  </div>
-                  {selectedQuestions.map((q, index) => (
-                    <div
-                      key={`${q._id}-${index}`}
-                      className="flex items-center gap-3 p-4 border rounded-lg bg-white"
-                    >
-                      <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
+            </div>
+          </Card>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-semibold text-gray-700">
-                            Q{q.order}
-                          </span>
-                          {q.category && (
-                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
-                              {q.category as string}
-                            </span>
-                          )}
-                          {q.chapter && (
-                            <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded">
-                              {q.chapter as string}
-                            </span>
-                          )}
-                          {q.difficulty && (
-                            <span
-                              className={`px-2 py-1 text-xs rounded ${
-                                String(q.difficulty).toUpperCase() === "EASY"
-                                  ? "bg-green-100 text-green-700"
-                                  : String(q.difficulty).toUpperCase() === "MEDIUM"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {q.difficulty as string}
-                            </span>
-                          )}
-                        </div>
-                        {q.topic && (
-                          <p className="text-sm text-gray-600 mb-2">
-                            {q.topic as string}
-                          </p>
+          {/* Question Selection Mode & Delivery Policy Card */}
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Question Selection & Delivery</h2>
+
+            <div className="space-y-4">
+              {/* Mode Selection */}
+              <div>
+                <Label>Question Selection Mode *</Label>
+                <div className="mt-2 space-y-2">
+                  {(["random", "selected", "mixed"] as const).map((mode) => (
+                    <div key={mode} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectionMode === mode}
+                        onCheckedChange={() => setValue("questionSelectionMode", mode)}
+                        id={`mode-${mode}`}
+                      />
+                      <label htmlFor={`mode-${mode}`} className="flex-1 cursor-pointer">
+                        <div className="font-medium capitalize">{mode.replace("-", " ")} Mode</div>
+                        {selectionMode === mode && (
+                          <p className="text-xs text-gray-600">{modeInfo?.description}</p>
                         )}
-                        <div className="text-sm text-gray-900 line-clamp-2">
-                          <QuestionRenderer content={q.questionText} />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600 px-3 py-2 bg-gray-100 rounded">
-                          {q.metadata.marks || watch("marksPerQuestion")} marks
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveQuestion(index)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
+                      </label>
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Delivery Policy */}
+              <div>
+                <Label>Delivery Policy *</Label>
+                <Select value={deliveryPolicy} onValueChange={(v) => setValue("questionDeliveryPolicy", v as any)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed-per-user">Fixed Per User</SelectItem>
+                    <SelectItem value="fresh-each-attempt">Fresh Each Attempt</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-600 mt-2">
+                  {deliveryPolicy === "fixed-per-user"
+                    ? "Each user gets the same set of questions for all attempts."
+                    : "Each attempt gets a fresh set of randomly selected questions."}
+                </p>
+              </div>
+
+              {/* Questions Per User - Show for Random/Mixed */}
+              {(selectionMode === "random" || selectionMode === "mixed") && (
+                <div>
+                  <Label>Questions Per User *</Label>
+                  <Input
+                    {...register("questionsPerUser", { valueAsNumber: true })}
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 150"
+                  />
+                  {errors.questionsPerUser && (
+                    <p className="text-red-600 text-sm">{errors.questionsPerUser.message}</p>
+                  )}
+                </div>
               )}
-            </CardContent>
+
+              {/* Subject Distribution - Show for Random/Mixed */}
+              {(selectionMode === "random" || selectionMode === "mixed") && (
+                <div className="border rounded-lg p-4 bg-blue-50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Checkbox
+                      {...register("ensureSubjectDistribution")}
+                      id="subjectDist"
+                    />
+                    <Label htmlFor="subjectDist" className="font-medium cursor-pointer">
+                      Ensure Subject Distribution
+                    </Label>
+                  </div>
+
+                  {ensureSubjectDistribution && category && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {getSubjectsForCategory(category).map((subject) => (
+                        <div key={subject}>
+                          <Label className="text-xs">{subject}</Label>
+                          <Input
+                            {...register(`subjectQuestionCounts.${subject}`, { valueAsNumber: true })}
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </Card>
 
-          {/* ── Submit ── */}
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push("/test-series")}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || selectedQuestions.length === 0}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
+          {/* Questions Section Card - Show for Selected/Mixed */}
+          {(selectionMode === "selected" || selectionMode === "mixed") && (
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Questions</h2>
+
+              {selectionMode === "selected" || selectionMode === "mixed" ? (
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-600">
+                    {selectionMode === "mixed"
+                      ? `Selected: ${selectedQuestions.length} / ${questionsPerUser || 100} total (${(questionsPerUser || 100) - selectedQuestions.length} will be randomly added)`
+                      : `Selected: ${selectedQuestions.length} questions`}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowQuestionSelector(true)}
+                  >
+                    + Add Questions
+                  </Button>
+
+                  {selectedQuestions.length > 0 && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-gray-100 px-4 py-3 flex gap-4 text-sm font-medium text-gray-700">
+                        <div className="w-8">#</div>
+                        <div className="flex-1">Question</div>
+                        <div className="action">Action</div>
+                      </div>
+                      <div className="divide-y">
+                        {selectedQuestions.map((q, idx) => (
+                          <div key={q._id} className="px-4 py-3 flex gap-4 items-center text-sm">
+                            <div className="w-8 text-gray-600">{idx + 1}</div>
+                            <div className="flex-1 text-gray-900">
+                              {q.questionText?.substring(0, 60)}...
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveQuestion(q._id)}
+                              className="text-red-600"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                "Save Changes"
+                <p className="text-gray-600 text-sm">No selection for random mode</p>
               )}
+            </Card>
+          )}
+
+          {/* Error Display */}
+          {submitError && (
+            <Card className="p-4 border-red-300 bg-red-50">
+              <p className="text-red-800 text-sm">{submitError}</p>
+            </Card>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4">
+            <Link href="/test-series">
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </Link>
+            <Button type="submit" className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4" />
+              Save Changes
             </Button>
           </div>
         </form>
-
-        {/* Question Selector Modal */}
-        {showQuestionSelector && (
-          <QuestionSelector
-            onSelect={handleAddQuestion}
-            onClose={() => setShowQuestionSelector(false)}
-            selectedQuestionIds={selectedQuestions.map((q) => q._id)}
-          />
-        )}
       </div>
     </div>
   );
