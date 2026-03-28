@@ -37,7 +37,7 @@ export default function QuestionEditPage() {
   const [editData, setEditData] = useState({
     questionText: "",
     solutionText: "",
-    options: [] as { text: string; isCorrect: boolean }[],
+    options: [] as { text: string; imageUrl?: string; isCorrect: boolean }[],
     difficulty: "medium",
     marks: 4,
     chapter: "",

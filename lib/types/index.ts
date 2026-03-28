@@ -103,6 +103,7 @@ export interface Question {
   questionImageBase64?: string | null;
   questionImageUrl?: string | null;
   solutionImageBase64?: string | null;
+  solutionImageUrl?: string | null;
   difficulty: 'easy' | 'medium' | 'hard';
   metadata: QuestionMetadata;
   createdAt: string;

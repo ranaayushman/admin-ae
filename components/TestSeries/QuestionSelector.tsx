@@ -57,6 +57,10 @@ export function QuestionSelector({
     "NEET", "JEE Main", "JEE Advanced", "Boards", "WBJEE", "Physics", "Chemistry", "Mathematics", "Biology"
   ];
 
+  const filteredQuestions = questions.filter(
+    (question) => !selectedQuestionIds.includes(question._id),
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
@@ -131,7 +135,7 @@ export function QuestionSelector({
               <p>Error loading questions</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
-          ) : questions.length === 0 ? (
+          ) : filteredQuestions.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <p>No questions found</p>
               <p className="text-sm mt-1">Try adjusting your filters</p>
