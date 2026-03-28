@@ -57,6 +57,10 @@ export function QuestionSelector({
     "NEET", "JEE Main", "JEE Advanced", "Boards", "WBJEE", "Physics", "Chemistry", "Mathematics", "Biology"
   ];
 
+  const filteredQuestions = questions.filter(
+    (question) => !selectedQuestionIds.includes(question._id),
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
@@ -131,63 +135,53 @@ export function QuestionSelector({
               <p>Error loading questions</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
-          ) : questions.length === 0 ? (
+          ) : filteredQuestions.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <p>No questions found</p>
               <p className="text-sm mt-1">Try adjusting your filters</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {questions.map((question) => {
-                const isSelected = selectedQuestionIds.includes(question._id);
-                return (
-                  <div
-                    key={question._id}
-                    className={`border rounded-lg p-4 transition ${isSelected ? 'opacity-50 bg-gray-50' : 'hover:bg-gray-50 cursor-pointer'}`}
-                    onClick={() => !isSelected && onSelect(question)}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                            {question.category}
-                          </span>
-                          <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded">
-                            {question.options?.length > 0 ? "MCQ" : "Numerical"}
-                          </span>
-                          <span
-                            className={`px-2 py-1 text-xs font-medium rounded ${
-                              question.difficulty === "EASY"
-                                ? "bg-green-100 text-green-700"
-                                : question.difficulty === "MEDIUM"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {question.difficulty}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          {question.chapter} • {question.topic}
-                        </p>
-                        <div className="text-sm text-gray-900 mt-2 line-clamp-2">
-                          <QuestionRenderer content={question.questionText} />
-                        </div>
+              {filteredQuestions.map((question) => (
+                <div
+                  key={question._id}
+                  className="border rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer"
+                  onClick={() => onSelect(question)}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                          {question.category}
+                        </span>
+                        <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded">
+                          {question.options.length > 0 ? "MCQ" : "Numerical"}
+                        </span>
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded ${
+                            question.difficulty === "easy"
+                              ? "bg-green-100 text-green-700"
+                              : question.difficulty === "medium"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {question.difficulty}
+                        </span>
                       </div>
-                      <Button 
-                        size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isSelected) onSelect(question);
-                        }}
-                        disabled={isSelected}
-                      >
-                        {isSelected ? "Added" : "Add"}
-                      </Button>
+                      <p className="text-sm text-gray-600">
+                        {question.chapter} • {question.topic}
+                      </p>
+                      <div className="text-sm text-gray-900 mt-2 line-clamp-2">
+                        <QuestionRenderer content={question.questionText} />
+                      </div>
                     </div>
+                    <Button size="sm" onClick={() => onSelect(question)}>
+                      Add
+                    </Button>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>

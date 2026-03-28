@@ -712,37 +712,34 @@ export default function CreateTestSeriesPage() {
                         >
                           <GripVertical className="w-4 h-4 text-gray-400 cursor-move" />
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-semibold text-gray-700">
-                                Q{q.order}
-                              </span>
-                              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
-                                {q.category}
-                              </span>
-                              <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded">
-                                {q.chapter}
-                              </span>
-                              <span
-                                className={`px-2 py-1 text-xs rounded ${
-                                  (q.difficulty || "").toUpperCase() === "EASY"
-                                    ? "bg-green-100 text-green-700"
-                                    : (q.difficulty || "").toUpperCase() ===
-                                      "MEDIUM"
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {(q.difficulty || "").toUpperCase()}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-2">
-                              {q.topic}
-                            </p>
-                            <div className="text-sm text-gray-900 line-clamp-2">
-                              <QuestionRenderer content={q.questionText} />
-                            </div>
-                          </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-gray-700">
+                            Q{q.order}
+                          </span>
+                          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
+                            {q.category}
+                          </span>
+                          <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded">
+                            {q.chapter}
+                          </span>
+                          <span
+                            className={`px-2 py-1 text-xs rounded ${
+                              q.difficulty === "easy"
+                                ? "bg-green-100 text-green-700"
+                                : q.difficulty === "medium"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {q.difficulty}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{q.topic}</p>
+                        <div className="text-sm text-gray-900 line-clamp-2">
+                          <QuestionRenderer content={q.questionText} />
+                        </div>
+                      </div>
 
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600 px-3 py-2 bg-gray-100 rounded">

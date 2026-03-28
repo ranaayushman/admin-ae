@@ -37,7 +37,7 @@ export default function QuestionEditPage() {
   const [editData, setEditData] = useState({
     questionText: "",
     solutionText: "",
-    options: [] as { text: string; isCorrect: boolean; imageUrl?: string }[],
+    options: [] as { text: string; imageUrl?: string; isCorrect: boolean }[],
     difficulty: "medium",
     marks: 4,
     chapter: "",
@@ -78,7 +78,7 @@ export default function QuestionEditPage() {
           questionText: data.questionText,
           solutionText: data.solutionText,
           options: parsedOptions,
-          difficulty: data.difficulty,
+          difficulty: data.difficulty?.toLowerCase() || "medium",
           marks: data.metadata.marks,
           chapter: data.chapter,
           topic: data.topic,
@@ -119,7 +119,7 @@ export default function QuestionEditPage() {
         solutionText: editData.solutionText,
         options: editData.options.map((opt) => ({ text: opt.text })),
         correctAnswer,
-        difficulty: editData.difficulty as "easy" | "medium" | "hard",
+        difficulty: editData.difficulty.toLowerCase() as "easy" | "medium" | "hard",
         metadata: { marks: editData.marks, year: question.metadata.year },
         chapter: editData.chapter,
         topic: editData.topic,
@@ -379,6 +379,9 @@ export default function QuestionEditPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
                       <SelectItem value="easy">Easy</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="hard">Hard</SelectItem>
