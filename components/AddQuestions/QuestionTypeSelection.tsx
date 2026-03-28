@@ -1,7 +1,7 @@
 // components/add-pyq/QuestionTypeSection.tsx
 "use client";
 
-import { useFieldArray, Control, UseFormRegister, Controller } from "react-hook-form";
+import { useFieldArray, Control, UseFormRegister, Controller, useFormContext, useWatch } from "react-hook-form";
 import {
   AddPyqFormValues,
   QuestionType,
@@ -39,10 +39,16 @@ export function QuestionTypeSection({
   setQuestionType,
   errors,
 }: QuestionTypeSectionProps) {
-  const { fields, append, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control,
     name: "options",
   });
+
+  // Get setValue from the form to do surgical updates
+  const { setValue, getValues } = useFormContext<AddPyqFormValues>();
+
+  // Watch options to get live isCorrect/imageBase64 values for re-rendering
+  const watchedOptions = useWatch({ control, name: "options" });
 
   const handleAddOption = () => {
     append({
@@ -53,17 +59,22 @@ export function QuestionTypeSection({
     });
   };
 
+  const handleSetCorrect = (index: number, checked: boolean) => {
+    // Only update isCorrect — do NOT touch text or other fields
+    setValue(`options.${index}.isCorrect`, checked, { shouldDirty: true });
+  };
+
   const handleImageUpload = (index: number, file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
-      update(index, { ...fields[index], imageBase64: base64 });
+      setValue(`options.${index}.imageBase64`, base64, { shouldDirty: true });
     };
     reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = (index: number) => {
-    update(index, { ...fields[index], imageBase64: "" });
+    setValue(`options.${index}.imageBase64`, "", { shouldDirty: true });
   };
 
   return (
@@ -126,12 +137,9 @@ export function QuestionTypeSection({
                   </Label>
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      checked={field.isCorrect}
+                      checked={!!watchedOptions?.[index]?.isCorrect}
                       onCheckedChange={(checked) =>
-                        update(index, {
-                          ...field,
-                          isCorrect: Boolean(checked),
-                        })
+                        handleSetCorrect(index, Boolean(checked))
                       }
                     />
                     <span className="text-xs text-muted-foreground">
@@ -158,10 +166,10 @@ export function QuestionTypeSection({
 
                 {/* Image upload for option */}
                 <div className="flex items-center gap-3 pt-2">
-                  {field.imageBase64 ? (
+                  {watchedOptions?.[index]?.imageBase64 ? (
                     <div className="relative inline-block">
                       <Image
-                        src={field.imageBase64}
+                        src={watchedOptions[index].imageBase64!}
                         alt={`Option ${String.fromCharCode(65 + index)} image`}
                         width={120}
                         height={80}

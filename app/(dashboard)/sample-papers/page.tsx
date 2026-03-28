@@ -103,6 +103,10 @@ export default function SamplePapersPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingPaper, setEditingPaper] = useState<Paper | null>(null);
   const [selectedClass, setSelectedClass] = useState<"10" | "12">("10");
+  const [page10, setPage10] = useState(1);
+  const [page12, setPage12] = useState(1);
+  const [pagination10, setPagination10] = useState({ totalPages: 1, total: 0 });
+  const [pagination12, setPagination12] = useState({ totalPages: 1, total: 0 });
 
   const {
     register,
@@ -125,7 +129,7 @@ export default function SamplePapersPage() {
 
   useEffect(() => {
     fetchPapers();
-  }, []);
+  }, [page10, page12]);
 
   // Populate form when editing paper
   useEffect(() => {
@@ -147,11 +151,22 @@ export default function SamplePapersPage() {
   const fetchPapers = async () => {
     setLoading(true);
     try {
-      const papers10Data = await papersService.getPapers({ category: "sample-10" });
-      const papers12Data = await papersService.getPapers({ category: "sample-12" });
+      const response10 = await papersService.getPapersPaginated({ 
+        category: "sample-10", 
+        page: page10, 
+        limit: 10 
+      });
+      const response12 = await papersService.getPapersPaginated({ 
+        category: "sample-12", 
+        page: page12, 
+        limit: 10 
+      });
 
-      setPapers10(papers10Data);
-      setPapers12(papers12Data);
+      setPapers10(response10.data);
+      setPagination10({ totalPages: response10.totalPages, total: response10.total });
+      
+      setPapers12(response12.data);
+      setPagination12({ totalPages: response12.totalPages, total: response12.total });
     } catch (error) {
       console.error("Failed to fetch papers:", error);
       toast.error("Failed to load papers");
@@ -326,11 +341,14 @@ export default function SamplePapersPage() {
                         <SelectValue placeholder="Select subject" />
                       </SelectTrigger>
                       <SelectContent>
-                        {subjects.map((subject) => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
+                        {subjects.map((subject) => {
+                          const val = subject.toLowerCase().replace(/\s+/g, '-');
+                          return (
+                            <SelectItem key={val} value={val}>
+                              {subject}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     {errors.subject && (
@@ -511,11 +529,14 @@ export default function SamplePapersPage() {
                         <SelectValue placeholder="Select subject" />
                       </SelectTrigger>
                       <SelectContent>
-                        {subjects.map((subject) => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
+                        {subjects.map((subject) => {
+                          const val = subject.toLowerCase().replace(/\s+/g, '-');
+                          return (
+                            <SelectItem key={val} value={val}>
+                              {subject}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     {errors.subject && (
@@ -632,11 +653,11 @@ export default function SamplePapersPage() {
             <TabsList className="mb-4">
               <TabsTrigger value="10" className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4" />
-                Class 10 ({papers10.length})
+                Class 10 ({pagination10.total})
               </TabsTrigger>
               <TabsTrigger value="12" className="flex items-center gap-2">
                 <GraduationCap className="w-4 h-4" />
-                Class 12 ({papers12.length})
+                Class 12 ({pagination12.total})
               </TabsTrigger>
             </TabsList>
 
@@ -676,7 +697,9 @@ export default function SamplePapersPage() {
                         <TableCell>
                           <Badge variant="secondary">{paper.board}</Badge>
                         </TableCell>
-                        <TableCell>{paper.subject}</TableCell>
+                        <TableCell>
+                          {paper.subject ? paper.subject.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : ""}
+                        </TableCell>
                         <TableCell>{paper.year}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -724,6 +747,37 @@ export default function SamplePapersPage() {
                     ))}
                   </TableBody>
                 </Table>
+              )}
+              
+              {!loading && papers.length > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-6 border-t font-sans">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {(selectedClass === "10" ? page10 - 1 : page12 - 1) * 10 + 1} to{" "}
+                    {Math.min((selectedClass === "10" ? page10 : page12) * 10, selectedClass === "10" ? pagination10.total : pagination12.total)} of{" "}
+                    {selectedClass === "10" ? pagination10.total : pagination12.total} papers
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={(selectedClass === "10" ? page10 : page12) === 1}
+                      onClick={() => selectedClass === "10" ? setPage10(p => p - 1) : setPage12(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <div className="text-sm font-medium">
+                      Page {selectedClass === "10" ? page10 : page12} of {selectedClass === "10" ? pagination10.totalPages : pagination12.totalPages}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={(selectedClass === "10" ? page10 : page12) >= (selectedClass === "10" ? pagination10.totalPages : pagination12.totalPages)}
+                      onClick={() => selectedClass === "10" ? setPage10(p => p + 1) : setPage12(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
               )}
             </TabsContent>
           </Tabs>

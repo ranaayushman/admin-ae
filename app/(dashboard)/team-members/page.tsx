@@ -59,6 +59,7 @@ import {
   RefreshCw,
   User,
 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 // Fallback image for when team member image fails to load
 const FALLBACK_IMAGE = "https://via.placeholder.com/200?text=No+Image";
@@ -144,7 +145,7 @@ export default function TeamMembersPage() {
       const data = await teamService.getTeamMembers({ sort: "displayOrder" });
       setTeamMembers(data);
     } catch (error: any) {
-      console.error("Failed to fetch team members:", error);
+      logger.error("Failed to fetch team members", error);
       toast.error("Failed to load team members", {
         description: error.message || "Please try again",
       });
@@ -161,7 +162,6 @@ export default function TeamMembersPage() {
   // Create new team member
   const onSubmit = async (data: TeamMemberFormValues) => {
     try {
-      console.log("🚀 [onSubmit] Submitting team member...", data);
       toast.info("Submitting...", { duration: 2000 });
 
       const payload: CreateTeamMemberPayload = {
@@ -172,12 +172,7 @@ export default function TeamMembersPage() {
         displayOrder: data.displayOrder,
         isActive: data.isActive,
       };
-
-      console.log("🚀 [onSubmit] Payload prepared:", payload);
-
       const newMember = await teamService.createTeamMember(payload);
-
-      console.log("✅ [onSubmit] Success!");
       toast.success("Team member added successfully!", {
         description: `${newMember.name} has been added to the team.`,
       });
@@ -195,7 +190,7 @@ export default function TeamMembersPage() {
       setShowCreateForm(false);
       fetchTeamMembers();
     } catch (error: any) {
-      console.error("❌ [onSubmit] Error caught:", error);
+      logger.error("❌ [onSubmit] Error caught", error);
       toast.error("Failed to add team member", {
         description:
           error.response?.data?.message || error.message || "Unknown error",
@@ -225,7 +220,6 @@ export default function TeamMembersPage() {
     if (!editingMember) return;
 
     try {
-      console.log("🚀 [onEditSubmit] Updating team member...", data);
       toast.info("Updating...", { duration: 2000 });
 
       const payload: UpdateTeamMemberPayload = {
@@ -240,15 +234,10 @@ export default function TeamMembersPage() {
       if (editProfileImage && editProfileImage !== editingMember.image) {
         payload.imageBase64 = editProfileImage;
       }
-
-      console.log("🚀 [onEditSubmit] Payload prepared:", payload);
-
       const updatedMember = await teamService.updateTeamMember(
         editingMember._id,
         payload,
       );
-
-      console.log("✅ [onEditSubmit] Success!");
       toast.success("Team member updated successfully!", {
         description: `${updatedMember.name} has been updated.`,
       });
@@ -257,7 +246,7 @@ export default function TeamMembersPage() {
       setEditingMember(null);
       fetchTeamMembers();
     } catch (error: any) {
-      console.error("❌ [onEditSubmit] Error caught:", error);
+      logger.error("❌ [onEditSubmit] Error caught", error);
       toast.error("Failed to update team member", {
         description:
           error.response?.data?.message || error.message || "Unknown error",
@@ -271,11 +260,7 @@ export default function TeamMembersPage() {
 
     try {
       setIsDeleting(true);
-      console.log(`🚀 [handleDelete] Deleting ${deletingMember.name}...`);
-
       await teamService.deleteTeamMember(deletingMember._id);
-
-      console.log("✅ [handleDelete] Success!");
       toast.success("Team member deleted", {
         description: `${deletingMember.name} has been removed from the team.`,
       });
@@ -283,7 +268,7 @@ export default function TeamMembersPage() {
       setDeletingMember(null);
       fetchTeamMembers();
     } catch (error: any) {
-      console.error("❌ [handleDelete] Error caught:", error);
+      logger.error("❌ [handleDelete] Error caught", error);
       toast.error("Failed to delete team member", {
         description:
           error.response?.data?.message || error.message || "Unknown error",
@@ -314,7 +299,7 @@ export default function TeamMembersPage() {
   };
 
   const onError = (errors: any) => {
-    console.error("❌ [onError] Validation failed:", errors);
+    logger.error("❌ [onError] Validation failed", errors);
     toast.error("Form Validation Failed", {
       description: "Please check the highlighted fields.",
     });

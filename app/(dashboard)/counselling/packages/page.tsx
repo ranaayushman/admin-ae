@@ -264,9 +264,7 @@ export default function CounsellingPackagesPage() {
 
   // Create new package
   const onSubmit = async (data: PackageFormValues) => {
-    try {
-      console.log("🚀 Creating package...", data);
-      toast.info("Creating package...");
+    try {      toast.info("Creating package...");
 
       const payload: CreateCounsellingPackagePayload = {
         ...data,
@@ -274,9 +272,6 @@ export default function CounsellingPackagesPage() {
         highlights: data.highlights.filter((h) => h.trim() !== ""),
         features: data.features.filter((f) => f.title.trim() !== ""),
       };
-
-      console.log("📤 Payload being sent:", JSON.stringify(payload, null, 2));
-
       const newPackage = await counsellingService.createPackage(payload);
 
       toast.success("Package created successfully!", {
@@ -335,9 +330,7 @@ export default function CounsellingPackagesPage() {
   const onEditSubmit = async (data: PackageFormValues) => {
     if (!editingPackage) return;
 
-    try {
-      console.log("🚀 Updating package...", data);
-      toast.info("Updating package...");
+    try {      toast.info("Updating package...");
 
       const payload: UpdateCounsellingPackagePayload = {
         ...data,

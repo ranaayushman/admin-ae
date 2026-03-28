@@ -4,7 +4,12 @@
 import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { Button } from "./button";
-import { convertImageToBase64, validateImageFile, formatFileSize } from "@/lib/utils/imageUtils";
+import {
+  convertImageToBase64,
+  validateImageFile,
+  formatFileSize,
+} from "@/lib/utils/imageUtils";
+import { logger } from "@/lib/logger";
 
 interface ImageUploadWithPreviewProps {
   onImageChange: (base64: string) => void;
@@ -43,7 +48,7 @@ export function ImageUploadWithPreview({
     try {
       // Convert to base64
       const base64 = await convertImageToBase64(file);
-      
+
       // Update preview and parent component
       setPreview(base64);
       setFileName(file.name);
@@ -51,7 +56,7 @@ export function ImageUploadWithPreview({
       onImageChange(base64);
     } catch (err) {
       setUploadError("Failed to process image. Please try again.");
-      console.error("Image conversion error:", err);
+      logger.error("Image conversion error", err);
     }
   };
 

@@ -1,20 +1,103 @@
 import apiClient, { handleApiError } from "./api.client";
 
 export type TestStatus = "draft" | "published";
+export type QuestionSelectionMode = "random" | "selected" | "mixed";
+export type QuestionDeliveryPolicy = "fixed-per-user" | "fresh-each-attempt";
+
+// Admin endpoint response shape
+export interface AdminQuestionOption {
+  id?: string;
+  text?: string;
+}
+
+export interface AdminQuestion {
+  id: string;
+  index: number;
+  questionText: string;
+  questionType: 'single-correct' | 'multi-correct' | 'integer' | string;
+  questionImageUrl?: string | null;
+  options: string[] | AdminQuestionOption[];
+  correctAnswer?: string | null;
+  correctAnswers?: string[];
+  numericalAnswer?: number | null;
+  tolerance?: number | null;
+  solutionText?: string;
+  solutionImageUrl?: string | null;
+  category?: string;
+  chapter?: string;
+  topic?: string;
+  difficulty?: string;
+  metadata?: { marks?: number };
+}
+
+export interface AdminTestData {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  type: 'mock' | 'practice' | 'previous_year' | string;
+  status: TestStatus;
+  duration: number;
+  totalMarks: number;
+  marksPerQuestion: number;
+  negativeMarking: number;
+  totalQuestions: number;
+  shuffleQuestions: boolean;
+  isPaid: boolean;
+  price?: number;
+  packageId?: string;
+  packageName?: string;
+  difficulty?: string;
+  subjects?: string[];
+  syllabus?: string[];
+  instructions?: string[];
+  sections?: any[];
+  thumbnail?: string | null;
+  assignedTo?: string[];
+  questions: AdminQuestion[];
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // New: Question selection mode and delivery policy
+  questionSelectionMode?: QuestionSelectionMode;
+  questionDeliveryPolicy?: QuestionDeliveryPolicy;
+  questionsPerUser?: number;
+  selectedQuestionIds?: string[];
+  ensureSubjectDistribution?: boolean;
+  subjectQuestionCounts?: Record<string, number>;
+}
+
+export interface AdminTestResponse {
+  success: boolean;
+  data: AdminTestData;
+}
 
 export interface CreateTestPayload {
   title: string;
   description: string;
   category: string;
-  questions: string[];
+  questions?: string[];
   duration: number;
   marksPerQuestion: number;
   negativeMarking: number;
   status: TestStatus;
   type: "mock" | "practice" | "previous_year";
+  difficulty?: string;
+  useExamPattern?: boolean;
+  subjects?: string[];
+  syllabus?: string[];
+  instructions?: string[];
+  sections?: any[];
   shuffleQuestions: boolean;
   startDate?: string;
   endDate?: string;
+  // New: Question selection mode and delivery policy
+  questionSelectionMode?: QuestionSelectionMode;
+  questionDeliveryPolicy?: QuestionDeliveryPolicy;
+  questionsPerUser?: number;
+  selectedQuestionIds?: string[];
+  ensureSubjectDistribution?: boolean;
+  subjectQuestionCounts?: Record<string, number>;
 }
 
 export interface Pagination {
@@ -37,6 +120,12 @@ export interface Test {
   status: TestStatus;
   type: "mock" | "practice" | "previous_year";
   shuffleQuestions: boolean;
+  useExamPattern?: boolean;
+  difficulty?: string;
+  subjects?: string[];
+  syllabus?: string[];
+  instructions?: string[];
+  sections?: any[];
   startDate?: string;
   endDate?: string;
   createdBy: string;
@@ -73,7 +162,31 @@ export interface AutoCreateTestPayload {
   title: string;
   category: string;
   duration: number;
+  questionCount?: number;
+  /** When true, applies exam-pattern sections (e.g. 3×25q for JEE Main) */
+  useExamPattern?: boolean;
+  /** Optional filter: limit to a specific chapter */
+  chapter?: string;
+  /** Optional filter: easy | medium | hard */
+  difficulty?: string;
+  // New: Question selection mode and delivery policy
+  questionSelectionMode?: QuestionSelectionMode;
+  questionDeliveryPolicy?: QuestionDeliveryPolicy;
+  questionsPerUser?: number;
+  selectedQuestionIds?: string[];
+  ensureSubjectDistribution?: boolean;
+  subjectQuestionCounts?: Record<string, number>;
+}
+
+export interface ExamPatternSection {
+  name: string;
+  subject: string;
   questionCount: number;
+  duration: number;
+  isTimed: boolean;
+  questionIds: string[];
+  marksPerCorrect: number;
+  negativeMarks: number;
 }
 
 export interface AutoCreateTestResponse {
@@ -86,9 +199,14 @@ export interface AutoCreateTestResponse {
     totalMarks?: number;
     duration: number;
     category: string;
-    type: "mock" | "practice" | "previous_year";
+    type: "mock" | "practice" | "previous_year" | "full-length";
     status: TestStatus;
     createdAt?: string;
+    /** Present when useExamPattern: true */
+    subjects?: string[];
+    sections?: ExamPatternSection[];
+    marksPerQuestion?: number;
+    negativeMarking?: number;
   };
 }
 
@@ -139,6 +257,14 @@ const normalizeListItem = (item: Record<string, unknown>): TestListItem => {
         ? item["totalQuestions"]
         : typeof item["totalQuestions"] === "string"
         ? Number(item["totalQuestions"])
+        : typeof item["questionCount"] === "number"
+        ? item["questionCount"]
+        : typeof item["questionCount"] === "string"
+        ? Number(item["questionCount"])
+        : typeof item["questionsCount"] === "number"
+        ? item["questionsCount"]
+        : typeof item["questionsCount"] === "string"
+        ? Number(item["questionsCount"])
         : undefined,
     questions,
   };
@@ -180,8 +306,8 @@ const extractPagination = (raw: unknown): Record<string, unknown> => {
 export const testService = {
   createTest: async (data: CreateTestPayload): Promise<Test> => {
     try {
-      const response = await apiClient.post<CreateTestResponse>("/tests", data);
-      return response.data.data;
+      const response = await apiClient.post<any>("/tests", data);
+      return response.data?.data || response.data;
     } catch (error) {
       throw new Error(handleApiError(error));
     }
@@ -262,6 +388,30 @@ export const testService = {
         return raw["data"] as unknown as Test;
       }
       return raw as unknown as Test;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  },
+
+  getTestByIdAdmin: async (id: string): Promise<AdminTestData> => {
+    try {
+      const response = await apiClient.get<AdminTestResponse>(`/tests/${id}/admin`);
+      return response.data.data;
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
+  },
+
+  updateTestAdmin: async (
+    id: string,
+    data: Partial<CreateTestPayload> & { questions?: string[] }
+  ): Promise<AdminTestData> => {
+    try {
+      const response = await apiClient.patch<AdminTestResponse>(
+        `/tests/${id}`,
+        data
+      );
+      return response.data.data;
     } catch (error) {
       throw new Error(handleApiError(error));
     }

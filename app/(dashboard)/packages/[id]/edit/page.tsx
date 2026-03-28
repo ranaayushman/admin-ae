@@ -258,12 +258,6 @@ export default function EditPackagePage() {
         subjects: selectedSubjects,
         examTypes: [data.category],
       });
-
-      console.log(
-        "📦 Update Package Payload:",
-        JSON.stringify(apiPayload, null, 2)
-      );
-
       await updatePackage(packageId, apiPayload);
 
       toast.success("Package updated successfully!");

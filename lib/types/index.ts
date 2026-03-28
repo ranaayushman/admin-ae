@@ -56,9 +56,31 @@ export interface ApiError {
 }
 
 // Question Bank Types
+export type QuestionSubject =
+  | 'physics'
+  | 'chemistry'
+  | 'mathematics'
+  | 'botany'
+  | 'zoology'
+  | 'biology'
+  | 'english'
+  | 'hindi';
+
+export type QuestionCategory = 'neet' | 'jee-main' | 'jee-advanced' | 'boards' | 'wbjee';
+
+export const VALID_SUBJECTS_BY_CATEGORY: Record<QuestionCategory, QuestionSubject[]> = {
+  'jee-main': ['physics', 'chemistry', 'mathematics'],
+  'jee-advanced': ['physics', 'chemistry', 'mathematics'],
+  'neet': ['physics', 'chemistry', 'botany', 'zoology'],
+  'wbjee': ['physics', 'chemistry', 'mathematics'],
+  'boards': ['physics', 'chemistry', 'mathematics', 'biology', 'english', 'hindi'],
+};
+
 export interface QuestionOption {
   text: string;
   isCorrect?: boolean;
+  imageUrl?: string;
+  imageBase64?: string; // Keep for backward compatibility/payload
 }
 
 export interface QuestionMetadata {
@@ -69,13 +91,17 @@ export interface QuestionMetadata {
 export interface Question {
   _id: string;
   category: string;
+  subject?: QuestionSubject;
   chapter: string;
   topic: string;
+  questionType?: 'single-correct' | 'multiple-correct' | 'integer' | 'numerical';
   questionText: string;
-  options: { text: string }[];
-  correctAnswer: string;
+  options: { text: string; imageBase64?: string; imageUrl?: string }[];
+  correctAnswer?: string;
+  correctAnswers?: string[];
   solutionText: string;
   questionImageBase64?: string | null;
+  questionImageUrl?: string | null;
   solutionImageBase64?: string | null;
   difficulty: 'easy' | 'medium' | 'hard';
   metadata: QuestionMetadata;
@@ -85,10 +111,12 @@ export interface Question {
 
 export interface CreateQuestionPayload {
   category: string;
+  subject?: QuestionSubject;
   chapter: string;
   topic: string;
   questionText: string;
-  options: { text: string }[];
+  questionType?: 'single-correct' | 'multiple-correct' | 'integer' | 'numerical';
+  options: { text: string; imageBase64?: string }[];
   correctAnswer: string;
   solutionText: string;
   questionImageBase64?: string | null;
@@ -118,6 +146,7 @@ export interface QuestionsListResponse {
 
 export interface QuestionFilters {
   category?: string;
+  subject?: QuestionSubject;
   chapter?: string;
   topic?: string;
   difficulty?: 'easy' | 'medium' | 'hard';

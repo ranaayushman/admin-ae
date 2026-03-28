@@ -9,8 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ImageUploadWithPreview } from "@/components/ui/ImageUploadWithPreview";
-import { Input } from "@/components/ui/input";
 import {
   Users,
   ShoppingCart,
@@ -22,20 +20,17 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
-import { toast } from "sonner";
 import {
   getDashboardStats,
   DashboardStats,
 } from "@/lib/services/dashboard.service";
+import { logger } from "@/lib/logger";
 
 export default function DashboardPage() {
-  const [bannerImage, setBannerImage] = useState("");
-  const [bannerTitle, setBannerTitle] = useState("");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch dashboard stats
   const fetchStats = async () => {
     setLoading(true);
     setError(null);
@@ -46,7 +41,7 @@ export default function DashboardPage() {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to load dashboard";
       setError(errorMessage);
-      console.error("Dashboard error:", err);
+      logger.error("Dashboard error", err);
     } finally {
       setLoading(false);
     }
@@ -56,32 +51,8 @@ export default function DashboardPage() {
     fetchStats();
   }, []);
 
-  const handleBannerUpdate = () => {
-    if (!bannerImage || !bannerTitle) {
-      toast.error("Please provide both banner image and title");
-      return;
-    }
-
-    const payload = {
-      bannerImage,
-      title: bannerTitle,
-      isActive: true,
-      updatedAt: new Date().toISOString(),
-    };
-
-    console.log("Banner Update Payload:", payload);
-    toast.success("Banner updated successfully", {
-      description: "Check console for payload",
-    });
-
-    setBannerImage("");
-    setBannerTitle("");
-  };
-
-  // Calculate total questions for percentage calculation
   const totalQuestions = stats?.totalQuestions?.count || 0;
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen p-6 bg-gray-50 flex items-center justify-center">
@@ -93,7 +64,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="min-h-screen p-6 bg-gray-50 flex items-center justify-center">
@@ -341,39 +311,6 @@ export default function DashboardPage() {
                     </div>
                   )
                 )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Update Home Banner */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Update Home Screen Banner</CardTitle>
-            <CardDescription>
-              Change the main banner displayed on the home page
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Banner Title
-              </label>
-              <Input
-                placeholder="Enter banner title..."
-                value={bannerTitle}
-                onChange={(e) => setBannerTitle(e.target.value)}
-              />
-            </div>
-
-            <ImageUploadWithPreview
-              label="Banner Image"
-              description="Upload banner image (Recommended: 1920x600px)"
-              onImageChange={setBannerImage}
-              currentImage={bannerImage}
-            />
-
-            <div className="flex justify-end">
-              <Button onClick={handleBannerUpdate}>Update Banner</Button>
             </div>
           </CardContent>
         </Card>

@@ -16,8 +16,9 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { questionService } from "@/lib/services/question.service";
-import { Question } from "@/lib/types";
+import { Question, VALID_SUBJECTS_BY_CATEGORY, QuestionCategory } from "@/lib/types";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
+import { logger } from "@/lib/logger";
 
 export default function QuestionsPage() {
   // Direct state - no fancy hooks
@@ -30,11 +31,18 @@ export default function QuestionsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [subjectFilter, setSubjectFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     questionId: string | null;
   }>({ isOpen: false, questionId: null });
+
+  // Subjects available for the selected category
+  const availableSubjects =
+    categoryFilter !== "all" && categoryFilter in VALID_SUBJECTS_BY_CATEGORY
+      ? VALID_SUBJECTS_BY_CATEGORY[categoryFilter as QuestionCategory]
+      : ['physics', 'chemistry', 'mathematics', 'botany', 'zoology', 'biology', 'english', 'hindi'];
 
   // Simple fetch function
   const fetchQuestions = async () => {
@@ -44,20 +52,21 @@ export default function QuestionsPage() {
     try {
       const response = await questionService.getQuestions({
         category:
-          categoryFilter !== "all" ? categoryFilter.toLowerCase() : undefined,
-        difficulty: difficultyFilter !== "all" ? difficultyFilter : undefined,
+          categoryFilter !== "all"
+            ? categoryFilter.toLowerCase()
+            : undefined,
+        subject: subjectFilter !== "all" ? (subjectFilter as any) : undefined,
+        difficulty:
+          difficultyFilter !== "all" ? difficultyFilter : undefined,
         search: searchQuery || undefined,
         page,
         limit: 20,
       });
-
-      console.log("✅ Questions loaded:", response);
-
       setQuestions(response.data);
       setTotal(response.pagination.total);
       setTotalPages(response.pagination.totalPages);
     } catch (err: any) {
-      console.error("❌ Failed to load questions:", err);
+      logger.error("❌ Failed to load questions", err);
       setError(err.message || "Failed to load questions");
     } finally {
       setLoading(false);
@@ -67,7 +76,12 @@ export default function QuestionsPage() {
   // Fetch on mount and when filters change
   useEffect(() => {
     fetchQuestions();
-  }, [page, categoryFilter, difficultyFilter, searchQuery]);
+  }, [page, categoryFilter, subjectFilter, difficultyFilter, searchQuery]);
+
+  // Reset subject filter when category changes
+  useEffect(() => {
+    setSubjectFilter("all");
+  }, [categoryFilter]);
 
   const handleDelete = async () => {
     if (!deleteDialog.questionId) return;
@@ -142,7 +156,7 @@ export default function QuestionsPage() {
 
         {/* Filters */}
         <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -163,6 +177,19 @@ export default function QuestionsPage() {
                 <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
                 <SelectItem value="boards">Boards</SelectItem>
                 <SelectItem value="wbjee">WBJEE</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Subjects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {availableSubjects.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select

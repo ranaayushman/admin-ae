@@ -27,38 +27,35 @@ export function QuestionSelector({
   onClose,
   selectedQuestionIds = [],
 }: QuestionSelectorProps) {
-  const { questions, loading, error, fetchQuestions, setFilters, filters } =
+  const { questions, loading, error, fetchQuestions, pagination } =
     useQuestionStore();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch questions on mount
+  // Fetch questions when filters or page changes
   useEffect(() => {
-    fetchQuestions({ page: 1, limit: 100 });
-  }, []);
+    fetchQuestions({
+      page: currentPage,
+      limit: 10,
+      search: searchQuery || undefined,
+      category: categoryFilter !== "all" ? categoryFilter : undefined,
+      difficulty: difficultyFilter !== "all" ? (difficultyFilter as any) : undefined,
+    });
+  }, [currentPage, categoryFilter, difficultyFilter, searchQuery]);
 
-  // Apply filters
-  const filteredQuestions = questions.filter((q) => {
-    // Skip already selected questions
-    if (selectedQuestionIds.includes(q._id)) return false;
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categoryFilter, difficultyFilter, searchQuery]);
 
-    const matchesSearch =
-      q.questionText.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.chapter.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.topic.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || q.category === categoryFilter;
-    const matchesDifficulty =
-      difficultyFilter === "all" || q.difficulty === difficultyFilter;
-
-    return matchesSearch && matchesCategory && matchesDifficulty;
-  });
-
-  // Extract unique categories for filter
-  const uniqueCategories = Array.from(
-    new Set(questions.map((q) => q.category))
-  ).filter(Boolean);
+  // Extract unique categories (Note: this might only show categories from current page if not handled by API)
+  // Ideally, API should provide global categories, but for now we use what's available
+  const uniqueCategories = [
+    "NEET", "JEE Main", "JEE Advanced", "Boards", "WBJEE", "Physics", "Chemistry", "Mathematics", "Biology"
+  ];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -70,7 +67,7 @@ export function QuestionSelector({
               Select Question
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Choose from {questions.length} questions in the question bank
+              Search and add questions from the bank
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -134,7 +131,7 @@ export function QuestionSelector({
               <p>Error loading questions</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
-          ) : filteredQuestions.length === 0 ? (
+          ) : questions.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <p>No questions found</p>
               <p className="text-sm mt-1">Try adjusting your filters</p>
@@ -185,11 +182,32 @@ export function QuestionSelector({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t bg-gray-50">
-          <p className="text-sm text-gray-500">
-            Showing {filteredQuestions.length} of {questions.length} questions
-          </p>
+        {/* Footer with Pagination */}
+        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
+          <div className="text-sm text-gray-500">
+            Showing {(pagination.page - 1) * pagination.limit + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} questions
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1 || loading}
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            >
+              Previous
+            </Button>
+            <span className="text-sm font-medium">
+              Page {pagination.page} of {pagination.totalPages || 1}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= pagination.totalPages || loading}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
     </div>

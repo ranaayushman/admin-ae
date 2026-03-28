@@ -1,5 +1,6 @@
-import apiClient, { handleApiError } from './api.client';
-import { CreateQuestionPayload, CreateQuestionResponse, Question } from '@/lib/types';
+import apiClient, { handleApiError } from "./api.client";
+import { CreateQuestionPayload, CreateQuestionResponse, Question } from "@/lib/types";
+import { logger } from "@/lib/logger";
 
 /**
  * Question Service
@@ -28,15 +29,12 @@ export const questionService = {
    */
   createQuestion: async (data: CreateQuestionPayload): Promise<Question> => {
     try {
-      const response = await apiClient.post<CreateQuestionResponse>('/questions', data);
-      
-      console.log('✅ Question created successfully:', response.data);
-      
+      const response = await apiClient.post<CreateQuestionResponse>('/questions', data);      
       // Handle different response structures:
       // API might return { data: question } or { data: { data: question, message: string } }
       // or even just the question directly
       const questionData = (response.data as any).data || response.data;
-      
+
       // If questionData has _id, it's likely the question object
       if (questionData && ((questionData as any)._id || (questionData as any).id)) {
         return normalizeQuestion(questionData);
@@ -46,7 +44,7 @@ export const questionService = {
       // Return the normalized data anyway
       return normalizeQuestion(questionData);
     } catch (error) {
-      console.error('❌ Error creating question:', error);
+      logger.error("❌ Error creating question", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -57,6 +55,7 @@ export const questionService = {
    */
   getQuestions: async (filters?: {
     category?: string;
+    subject?: string;
     chapter?: string;
     topic?: string;
     difficulty?: string;
@@ -68,6 +67,7 @@ export const questionService = {
       const params = new URLSearchParams();
       
       if (filters?.category) params.append('category', filters.category);
+      if (filters?.subject) params.append('subject', filters.subject);
       if (filters?.chapter) params.append('chapter', filters.chapter);
       if (filters?.topic) params.append('topic', filters.topic);
       if (filters?.difficulty) params.append('difficulty', filters.difficulty);
@@ -76,7 +76,7 @@ export const questionService = {
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
       const queryString = params.toString();
-      const url = queryString ? `/questions?${queryString}` : '/questions';
+      const url = queryString ? `/questions?${queryString}` : "/questions";
 
       const response = await apiClient.get<{
         data: any[];
@@ -84,10 +84,7 @@ export const questionService = {
         page: number;
         limit: number;
         totalPages?: number;
-      }>(url);
-      
-      console.log('✅ Questions fetched successfully:', response.data);
-      
+      }>(url);      
       // Extract data and pagination from the response
       const { data: questions, total, page, limit, totalPages } = response.data;
       
@@ -104,7 +101,7 @@ export const questionService = {
         },
       };
     } catch (error) {
-      console.error('❌ Error fetching questions:', error);
+      logger.error("❌ Error fetching questions", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -116,14 +113,11 @@ export const questionService = {
   getQuestionById: async (id: string): Promise<Question> => {
     try {
       const response = await apiClient.get(`/questions/${id}`);
-      
-      console.log('✅ Question fetched successfully:', response.data);
-      
       // The API might return the question directly or nested under 'data'
       const questionData = response.data.data || response.data;
       return normalizeQuestion(questionData);
     } catch (error) {
-      console.error('❌ Error fetching question:', error);
+      logger.error("❌ Error fetching question", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -135,14 +129,11 @@ export const questionService = {
   updateQuestion: async (id: string, data: Partial<CreateQuestionPayload>): Promise<Question> => {
     try {
       const response = await apiClient.patch<CreateQuestionResponse>(`/questions/${id}`, data);
-      
-      console.log('✅ Question updated successfully:', response.data);
-      
       // Handle different response structures
       const questionData = (response.data as any).data || response.data;
       return normalizeQuestion(questionData);
     } catch (error) {
-      console.error('❌ Error updating question:', error);
+      logger.error("❌ Error updating question", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -153,10 +144,7 @@ export const questionService = {
    */
   deleteQuestion: async (id: string): Promise<void> => {
     try {
-      await apiClient.delete(`/questions/${id}`);
-      
-      console.log('✅ Question deleted successfully');
-    } catch (error) {
+      await apiClient.delete(`/questions/${id}`);    } catch (error) {
       throw new Error(handleApiError(error));
     }
   },

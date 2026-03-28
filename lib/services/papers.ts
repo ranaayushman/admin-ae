@@ -51,6 +51,14 @@ export interface Paper {
   updatedAt: string;
 }
 
+export interface PaginatedPapersResponse {
+  data: Paper[];
+  total: number;
+  page: number;
+  totalPages: number;
+  hasNextPage: boolean;
+}
+
 export interface CreatePaperPayload {
   category: PaperCategory;
   year: number;
@@ -68,82 +76,6 @@ export interface CreatePaperPayload {
 export type CreatePaperWithSolutionPayload = CreatePaperPayload;
 export type CreatePaperNoSolutionPayload = CreatePaperPayload;
 
-// Mock data for boards and sample papers (until API is ready)
-const MOCK_PAPERS: Paper[] = [
-  // Class 10 PYQ
-  {
-    _id: "boards-10-pyq-1",
-    category: "boards-10",
-    year: 2025,
-    title: "CBSE Class 10 Mathematics PYQ 2025",
-    type: "PYQ",
-    subject: "Mathematics",
-    board: "CBSE",
-    paperDriveLink: "https://drive.google.com/file/d/example1/view",
-    solutionDriveLink: "https://drive.google.com/file/d/example1-sol/view",
-    displayOrder: 1,
-    createdAt: "2025-03-01",
-    updatedAt: "2025-03-01",
-  },
-  {
-    _id: "boards-10-pyq-2",
-    category: "boards-10",
-    year: 2025,
-    title: "CBSE Class 10 Science PYQ 2025",
-    type: "PYQ",
-    subject: "Science",
-    board: "CBSE",
-    paperDriveLink: "https://drive.google.com/file/d/example2/view",
-    solutionDriveLink: "https://drive.google.com/file/d/example2-sol/view",
-    displayOrder: 2,
-    createdAt: "2025-03-01",
-    updatedAt: "2025-03-01",
-  },
-  // Class 12 PYQ
-  {
-    _id: "boards-12-pyq-1",
-    category: "boards-12",
-    year: 2025,
-    title: "CBSE Class 12 Physics PYQ 2025",
-    type: "PYQ",
-    subject: "Physics",
-    board: "CBSE",
-    paperDriveLink: "https://drive.google.com/file/d/example6/view",
-    solutionDriveLink: "https://drive.google.com/file/d/example6-sol/view",
-    displayOrder: 1,
-    createdAt: "2025-03-01",
-    updatedAt: "2025-03-01",
-  },
-  // Sample Papers
-  {
-    _id: "sample-10-1",
-    category: "sample-10",
-    year: 2026,
-    title: "CBSE Class 10 Mathematics Sample Paper 2026",
-    type: "Sample Paper",
-    subject: "Mathematics",
-    board: "CBSE",
-    paperDriveLink: "https://drive.google.com/file/d/sample1/view",
-    solutionDriveLink: "https://drive.google.com/file/d/sample1-sol/view",
-    displayOrder: 1,
-    createdAt: "2025-12-01",
-    updatedAt: "2025-12-01",
-  },
-  {
-    _id: "sample-12-1",
-    category: "sample-12",
-    year: 2026,
-    title: "CBSE Class 12 Physics Sample Paper 2026",
-    type: "Sample Paper",
-    subject: "Physics",
-    board: "CBSE",
-    paperDriveLink: "https://drive.google.com/file/d/sample4/view",
-    solutionDriveLink: "https://drive.google.com/file/d/sample4-sol/view",
-    displayOrder: 1,
-    createdAt: "2025-12-01",
-    updatedAt: "2025-12-01",
-  },
-];
 
 export const papersService = {
   // Create paper with solution
@@ -175,9 +107,10 @@ export const papersService = {
     }
   },
 
-  // Get papers with advanced filtering
+  // Get papers with advanced filtering (returns array only - backward compat)
   getPapers: async (params: {
     category?: PaperCategory;
+    type?: string;
     board?: BoardName;
     subject?: string;
     year?: number;
@@ -189,6 +122,29 @@ export const papersService = {
     const data = response.data;
     // Handle both array and paginated response { data: Paper[], total: ... }
     return Array.isArray(data) ? data : (data.data || []);
+  },
+
+  // Get papers with full pagination info
+  getPapersPaginated: async (params: {
+    category?: PaperCategory;
+    type?: string;
+    board?: BoardName;
+    subject?: string;
+    year?: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedPapersResponse> => {
+    const response = await apiClient.get("/papers", { params });
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return { data, total: data.length, page: 1, totalPages: 1, hasNextPage: false };
+    }
+    const papers: Paper[] = data.data || [];
+    const total: number = data.total || papers.length;
+    const page: number = data.page || params.page || 1;
+    const totalPages: number = data.totalPages || data.pages || 1;
+    return { data: papers, total, page, totalPages, hasNextPage: page < totalPages };
   },
 
   // Update paper (PATCH /papers/:id)

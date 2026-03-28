@@ -1,7 +1,8 @@
-import apiClient, { handleApiError } from './api.client';
-import { LoginCredentials, RegisterData, AuthResponse, User } from '@/lib/types';
-import { storage, STORAGE_KEYS } from '@/lib/utils/storage';
-import { tokenManager } from '@/lib/utils/tokenManager';
+import apiClient, { handleApiError } from "./api.client";
+import { LoginCredentials, RegisterData, AuthResponse, User } from "@/lib/types";
+import { storage, STORAGE_KEYS } from "@/lib/utils/storage";
+import { tokenManager } from "@/lib/utils/tokenManager";
+import { logger } from "@/lib/logger";
 
 /**
  * Authentication Service
@@ -50,11 +51,9 @@ export const authService = {
    */
   register: async (data: RegisterData): Promise<AuthResponse> => {
     try {
-      const response = await apiClient.post<ApiRegisterResponse>('/auth/register', data);
+      const response = await apiClient.post<ApiRegisterResponse>("/auth/register", data);
       
-      // Success message from API
-      console.log('✅ Registration successful:', response.data.message);
-      
+      // Success message from API      
       // Map the API response to the AuthResponse format expected by the app
       const authResponse: AuthResponse = {
         user: {
@@ -82,18 +81,16 @@ export const authService = {
    */
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await apiClient.post<ApiLoginResponse>('/auth/login', credentials);
+      const response = await apiClient.post<ApiLoginResponse>("/auth/login", credentials);
       
-      // Success message from API
-      console.log('✅ Login successful:', response.data.message);
-      
+      // Success message from API      
       // CRITICAL: API returns 'token' field but we need to map it correctly
       // Check if API response has the token field
       const apiToken = response.data.data.token;
       
       if (!apiToken) {
-        console.error('⚠️ No token in API response:', response.data);
-        throw new Error('No authentication token received from server');
+        logger.error("No token in API response");
+        throw new Error("No authentication token received from server");
       }
       
       // Map the API response to the AuthResponse format expected by the app
@@ -108,10 +105,7 @@ export const authService = {
         },
         token: apiToken,
         refreshToken: response.data.data.refreshToken,
-      };
-
-      console.log('🔐 Mapped auth response with token:', apiToken ? 'present' : 'MISSING');
-      return authResponse;
+      };      return authResponse;
     } catch (error) {
       throw new Error(handleApiError(error));
     }
@@ -123,7 +117,11 @@ export const authService = {
    */
   getCurrentUser: async (): Promise<User> => {
     try {
-      const response = await apiClient.get<{ _id: string; identifier: string; roles: string[] }>('/auth/profile');
+      const response = await apiClient.get<{
+        _id: string;
+        identifier: string;
+        roles: string[];
+      }>("/auth/profile");
       
       // API returns minimal data (_id, identifier, roles)
       // Get full user data from localStorage if available
@@ -139,10 +137,7 @@ export const authService = {
         dateOfBirth: savedUser?.dateOfBirth || '',
         createdAt: savedUser?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      };
-      
-      console.log('✅ Profile fetched successfully');
-      return user;
+      };      return user;
     } catch (error) {
       throw new Error(handleApiError(error));
     }
@@ -156,35 +151,32 @@ export const authService = {
    * - accessToken: new access token (always)
    * - refreshToken: new refresh token (optional, if API rotates refresh tokens)
    */
-  refreshToken: async (refreshToken: string): Promise<{ accessToken: string; refreshToken?: string }> => {
-    try {
-      console.log('🔄 Calling token refresh API...');
-      
-      const response = await apiClient.post<{ accessToken: string; refreshToken?: string }>('/auth/refresh', {
+  refreshToken: async (
+    refreshToken: string,
+  ): Promise<{ accessToken: string; refreshToken?: string }> => {
+    try {      
+      const response = await apiClient.post<{
+        accessToken: string;
+        refreshToken?: string;
+      }>("/auth/refresh", {
         refreshToken,
       });
-      
-      console.log('✅ Token refresh API successful');
-      
       const { accessToken, refreshToken: newRefreshToken } = response.data;
       
       // CRITICAL: Immediately store the new access token
       // This ensures all subsequent requests use the new token
-      tokenManager.setAuthToken(accessToken);
-      console.log('🔐 New access token stored in memory');
-      
+      tokenManager.setAuthToken(accessToken);      
       // If API returns a new refresh token (token rotation), store it
       if (newRefreshToken) {
         tokenManager.setRefreshToken(newRefreshToken);
-        console.log('🔐 New refresh token stored in memory (token rotation)');
       }
       
-      return { 
-        accessToken, 
-        refreshToken: newRefreshToken 
+      return {
+        accessToken,
+        refreshToken: newRefreshToken,
       };
     } catch (error) {
-      console.error('❌ Token refresh failed:', error);
+      logger.error("❌ Token refresh failed", error);
       throw new Error(handleApiError(error));
     }
   },
@@ -196,11 +188,13 @@ export const authService = {
   logout: async (): Promise<void> => {
     try {
       // API uses Authorization header (added by interceptor), no body needed
-      const response = await apiClient.post<{ success: boolean; message: string }>('/auth/logout', {});
-      console.log('✅ Logout successful:', response.data.message);
+      const response = await apiClient.post<{ success: boolean; message: string }>(
+        "/auth/logout",
+        {},
+      );
     } catch (error) {
       // Ignore logout errors, still clear local storage
-      console.error('⚠️ Logout API error (will still clear local storage):', error);
+      logger.error("⚠️ Logout API error (will still clear local storage)", error);
     }
   },
 

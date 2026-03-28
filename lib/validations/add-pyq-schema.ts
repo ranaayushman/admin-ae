@@ -2,6 +2,29 @@
 import { z } from "zod";
 import { hasTextContent } from "@/lib/utils/htmlUtils";
 
+export const questionCategories = [
+  "neet",
+  "jee-main",
+  "jee-advanced",
+  "boards",
+  "wbjee",
+] as const;
+
+export type QuestionCategory = (typeof questionCategories)[number];
+
+export const questionSubjects = [
+  "physics",
+  "chemistry",
+  "mathematics",
+  "botany",
+  "zoology",
+  "biology",
+  "english",
+  "hindi",
+] as const;
+
+export type QuestionSubjectEnum = (typeof questionSubjects)[number];
+
 export const questionTypes = [
   "SINGLE_CORRECT",
   "MULTI_CORRECT",
@@ -24,8 +47,12 @@ export type RoundingMode = (typeof roundingModes)[number];
 
 export const addPyqSchema = z
   .object({
-    subject: z.string().min(1, "Subject is required"),
+    category: z.enum(questionCategories, {
+      message: "Category is required",
+    }),
+    subject: z.enum(questionSubjects).optional(),
     chapter: z.string().min(1, "Chapter is required"),
+    topic: z.string().min(1, "Topic is required"),
     difficulty: z.enum(["easy", "medium", "hard"], {
       message: "Difficulty is required",
     }),

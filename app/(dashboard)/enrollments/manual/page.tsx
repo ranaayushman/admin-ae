@@ -1,7 +1,7 @@
 // app/enrollments/manual/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -27,17 +27,19 @@ import {
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
-
-// Mock packages
-const mockPackages = [
-  { id: "pkg_001", name: "JEE Main 2025 Complete Package", price: 2999 },
-  { id: "pkg_002", name: "NEET 2025 Crash Course", price: 1999 },
-  { id: "pkg_003", name: "12th Board Practice Package", price: 999 },
-];
+import { getPackages, Package } from "@/lib/services/package.service";
+import {
+  adminUsersService,
+  AdminUser,
+} from "@/lib/services/adminUsers.service";
+import { logger } from "@/lib/logger";
 
 export default function ManualEnrollmentPage() {
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
   const [studentFound, setStudentFound] = useState(false);
-  const [studentInfo, setStudentInfo] = useState<any>(null);
+  const [studentInfo, setStudentInfo] = useState<AdminUser | null>(null);
+  const [searching, setSearching] = useState(false);
 
   const {
     register,
@@ -60,30 +62,58 @@ export default function ManualEnrollmentPage() {
 
   const enrollmentType = watch("enrollmentType");
 
-  const handleStudentSearch = () => {
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const res = await getPackages({ status: "active", limit: 100 });
+        setPackages(res.data || []);
+      } catch (err) {
+        logger.error("Failed to fetch packages", err);
+        toast.error("Failed to load packages");
+      } finally {
+        setPackagesLoading(false);
+      }
+    };
+    fetchPackages();
+  }, []);
+
+  const handleStudentSearch = async () => {
     const email = watch("studentEmail");
-    if (email) {
-      // Mock student lookup
-      setStudentInfo({
-        name: "John Doe",
-        email: email,
-        phone: "+91 9876543210",
-        enrollments: 2,
-      });
-      setStudentFound(true);
-      toast.success("Student found!");
+    if (!email) return;
+
+    setSearching(true);
+    try {
+      // Search users by email using admin users endpoint
+      const data = await adminUsersService.getAllUsers({ page: 1, limit: 50 });
+      const match = data.users.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase(),
+      );
+
+      if (match) {
+        setStudentInfo(match);
+        setStudentFound(true);
+        toast.success("Student found!");
+      } else {
+        setStudentFound(false);
+        setStudentInfo(null);
+        toast.error("No student found with that email address.");
+      }
+    } catch (err) {
+      logger.error("Student lookup failed", err);
+      toast.error("Failed to search for student.");
+    } finally {
+      setSearching(false);
     }
   };
 
   const onSubmit = (data: ManualEnrollmentFormValues) => {
-    const payload = {
-      ...data,
-      studentInfo,
-      enrolledAt: new Date().toISOString(),
-      enrolledBy: "admin_id",
-    };
-
-    console.log("Manual Enrollment Payload:", payload);
+    // TODO: Wire up to real enrollment API endpoint when available
+    logger.info("Enrollment submitted", {
+      enrollmentType: data.enrollmentType,
+      packageId: data.packageId,
+      customPrice: data.customPrice,
+      customValidity: data.customValidity,
+    });
     toast.success("Student enrolled successfully!", {
       description: `Enrolled in package via ${data.enrollmentType} enrollment`,
     });
@@ -130,10 +160,11 @@ export default function ManualEnrollmentPage() {
                   <Button
                     type="button"
                     onClick={handleStudentSearch}
+                    disabled={searching}
                     className="flex items-center gap-2"
                   >
                     <Search className="w-4 h-4" />
-                    Search
+                    {searching ? "Searching..." : "Search"}
                   </Button>
                 </div>
               </div>
@@ -154,12 +185,12 @@ export default function ManualEnrollmentPage() {
                     </div>
                     <div>
                       <span className="text-gray-600">Phone:</span>
-                      <span className="ml-2 font-medium">{studentInfo.phone}</span>
+                      <span className="ml-2 font-medium">{studentInfo.phone || "—"}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Current Enrollments:</span>
+                      <span className="text-gray-600">Verified:</span>
                       <span className="ml-2 font-medium">
-                        {studentInfo.enrollments}
+                        {studentInfo.isEmailVerified ? "Yes" : "No"}
                       </span>
                     </div>
                   </div>
@@ -179,18 +210,25 @@ export default function ManualEnrollmentPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="packageId">Package *</Label>
-                    <Select
-                      onValueChange={(value) => setValue("packageId", value)}
-                    >
+                    <Select onValueChange={(value) => setValue("packageId", value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select package" />
+                        <SelectValue
+                          placeholder={
+                            packagesLoading ? "Loading packages..." : "Select package"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockPackages.map((pkg) => (
-                          <SelectItem key={pkg.id} value={pkg.id}>
-                            {pkg.name} - ₹{pkg.price}
+                        {packages.map((pkg) => (
+                          <SelectItem key={pkg._id} value={pkg._id}>
+                            {pkg.title} — ₹{pkg.price}
                           </SelectItem>
                         ))}
+                        {!packagesLoading && packages.length === 0 && (
+                          <SelectItem value="" disabled>
+                            No active packages found
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     {errors.packageId && (

@@ -18,10 +18,11 @@ import {
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { questionService } from "@/lib/services/question.service";
-import { Question } from "@/lib/types";
+import { VALID_SUBJECTS_BY_CATEGORY, QuestionCategory, Question } from "@/lib/types";
 import { TiptapEditor } from "@/components/AddQuestions/TipTapEditor";
 import { OptionEditor } from "@/components/AddQuestions/OptionEditor";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export default function QuestionEditPage() {
   const params = useParams();
@@ -41,13 +42,20 @@ export default function QuestionEditPage() {
     marks: 4,
     chapter: "",
     topic: "",
+    category: "",
+    subject: "",
+    questionImageUrl: null as string | null,
+    solutionImageUrl: null as string | null,
   });
+
+  const availableSubjects = editData.category && VALID_SUBJECTS_BY_CATEGORY[editData.category as QuestionCategory] 
+    ? VALID_SUBJECTS_BY_CATEGORY[editData.category as QuestionCategory] 
+    : [];
 
   useEffect(() => {
     const fetchQuestion = async () => {
       try {
         const data = await questionService.getQuestionById(id);
-        console.log("✅ Question loaded:", data);
         setQuestion(data);
 
         // Parse options from the question
@@ -56,9 +64,12 @@ export default function QuestionEditPage() {
             const letter = String.fromCharCode(65 + idx);
             // Handle both object { text: string } and plain string formats
             const optionText = typeof opt === "string" ? opt : opt.text;
+            const optionImageUrl = typeof opt === "object" ? opt.imageUrl : undefined;
+            const isCorrect = data.correctAnswer?.includes(letter) || data.correctAnswers?.includes(letter) || false;
             return {
               text: optionText,
-              isCorrect: data.correctAnswer.includes(letter),
+              imageUrl: optionImageUrl,
+              isCorrect,
             };
           })
           : [];
@@ -71,9 +82,13 @@ export default function QuestionEditPage() {
           marks: data.metadata.marks,
           chapter: data.chapter,
           topic: data.topic,
+          category: data.category || "",
+          subject: data.subject || "",
+          questionImageUrl: data.questionImageUrl || null,
+          solutionImageUrl: data.solutionImageUrl || null,
         });
       } catch (err: any) {
-        console.error("❌ Failed:", err);
+        logger.error("❌ Failed to load question for edit", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -96,7 +111,7 @@ export default function QuestionEditPage() {
           .filter((v) => v !== null);
         correctAnswer = correctIndices.join(",");
       } else {
-        correctAnswer = question.correctAnswer; // Keep original for non-MCQ
+        correctAnswer = question.correctAnswer || question.correctAnswers?.join(",") || "A"; // Keep original for non-MCQ
       }
 
       await questionService.updateQuestion(id, {
@@ -108,6 +123,8 @@ export default function QuestionEditPage() {
         metadata: { marks: editData.marks, year: question.metadata.year },
         chapter: editData.chapter,
         topic: editData.topic,
+        category: editData.category,
+        subject: editData.subject as any,
       });
       toast.success("Question updated successfully!");
       router.push(`/questions/${id}`);
@@ -181,6 +198,16 @@ export default function QuestionEditPage() {
                   setEditData({ ...editData, questionText: val })
                 }
               />
+              {editData.questionImageUrl && (
+                <div className="mt-4">
+                  <Label className="text-sm font-medium mb-2 block text-muted-foreground">Current Image:</Label>
+                  <img
+                    src={editData.questionImageUrl}
+                    alt="Question Diagram"
+                    className="max-h-64 rounded-lg border bg-white object-contain"
+                  />
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -221,6 +248,15 @@ export default function QuestionEditPage() {
                           65 + index
                         )} text`}
                       />
+                      {option.imageUrl && (
+                        <div className="mt-2">
+                          <img
+                            src={option.imageUrl}
+                            alt={`Option ${String.fromCharCode(65 + index)}`}
+                            className="max-h-32 rounded border bg-white object-contain"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -240,6 +276,16 @@ export default function QuestionEditPage() {
                   setEditData({ ...editData, solutionText: val })
                 }
               />
+              {editData.solutionImageUrl && (
+                <div className="mt-4">
+                  <Label className="text-sm font-medium mb-2 block text-muted-foreground">Current Solution Image:</Label>
+                  <img
+                    src={editData.solutionImageUrl}
+                    alt="Solution Diagram"
+                    className="max-h-64 rounded-lg border bg-white object-contain"
+                  />
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -274,6 +320,53 @@ export default function QuestionEditPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">
+                    Category
+                  </label>
+                  <Select
+                    value={editData.category}
+                    onValueChange={(v) =>
+                      setEditData({ ...editData, category: v, subject: "" }) // reset subject on category change
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="neet">NEET</SelectItem>
+                      <SelectItem value="jee-main">JEE Main</SelectItem>
+                      <SelectItem value="jee-advanced">JEE Advanced</SelectItem>
+                      <SelectItem value="boards">Boards</SelectItem>
+                      <SelectItem value="wbjee">WBJEE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Subject
+                  </label>
+                  <Select
+                    value={editData.subject}
+                    onValueChange={(v) =>
+                      setEditData({ ...editData, subject: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSubjects.map((sub) => (
+                        <SelectItem key={sub} value={sub}>
+                          {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                        </SelectItem>
+                      ))}
+                      {availableSubjects.length === 0 && (
+                        <SelectItem value="none" disabled>Select category first</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
                     Difficulty
                   </label>
                   <Select
@@ -286,6 +379,9 @@ export default function QuestionEditPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
                       <SelectItem value="easy">Easy</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="hard">Hard</SelectItem>

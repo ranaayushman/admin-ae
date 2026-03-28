@@ -10,14 +10,10 @@ export const internshipService = {
   getInternshipApplications: async (params?: {
     page?: number;
     limit?: number;
-  }): Promise<InternshipResponse> => {
-    console.log("🚀 [internshipService] GET /internship", params);
-    const response: AxiosResponse<InternshipResponse> = await apiClient.get(
+  }): Promise<InternshipResponse> => {    const response: AxiosResponse<InternshipResponse> = await apiClient.get(
       "/internship",
       { params }
-    );
-    console.log("✅ [internshipService] Response:", response.data);
-    return response.data;
+    );    return response.data;
   },
 };
 
