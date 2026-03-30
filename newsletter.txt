@@ -1,0 +1,447 @@
+NEWSLETTER MODULE API INTEGRATION GUIDE
+
+Base URL
+- /api/v1/admin/newsletter
+
+Auth Requirements
+- All endpoints require admin JWT token.
+- Header:
+  Authorization: Bearer <admin_jwt_token>
+
+--------------------------------------------------------------------------------
+1) CREATE TEMPLATE
+--------------------------------------------------------------------------------
+POST /api/v1/admin/newsletter/templates
+
+Request Body
+{
+  "name": "Monthly Exam Newsletter",
+  "key": "newsletter.monthly-exam",
+  "category": "newsletter",
+  "subjectTemplate": "Hi {{name}}, latest updates for {{exam}}",
+  "htmlTemplate": "<h1>Hello {{name}}</h1><p>New tests for {{exam}} are now live.</p>",
+  "textTemplate": "Hello {{name}}. New tests for {{exam}} are now live.",
+  "variables": ["name", "exam"],
+  "isActive": true
+}
+
+Success Response (201)
+{
+  "_id": "67f01b5a3b81d17dc8d5c611",
+  "name": "Monthly Exam Newsletter",
+  "key": "newsletter.monthly-exam",
+  "category": "newsletter",
+  "subjectTemplate": "Hi {{name}}, latest updates for {{exam}}",
+  "htmlTemplate": "<h1>Hello {{name}}</h1><p>New tests for {{exam}} are now live.</p>",
+  "textTemplate": "Hello {{name}}. New tests for {{exam}} are now live.",
+  "variables": ["name", "exam"],
+  "isActive": true,
+  "version": 1,
+  "createdBy": "67efef2a1a38a56a5fcf2201",
+  "updatedBy": "67efef2a1a38a56a5fcf2201",
+  "createdAt": "2026-03-30T12:15:00.000Z",
+  "updatedAt": "2026-03-30T12:15:00.000Z"
+}
+
+Common Errors
+- 400: Template key already exists
+- 401/403: Unauthorized or non-admin
+
+--------------------------------------------------------------------------------
+2) LIST TEMPLATES
+--------------------------------------------------------------------------------
+GET /api/v1/admin/newsletter/templates
+
+Success Response (200)
+[
+  {
+    "_id": "67f01b5a3b81d17dc8d5c611",
+    "name": "Monthly Exam Newsletter",
+    "key": "newsletter.monthly-exam",
+    "category": "newsletter",
+    "subjectTemplate": "Hi {{name}}, latest updates for {{exam}}",
+    "htmlTemplate": "<h1>Hello {{name}}</h1><p>New tests for {{exam}} are now live.</p>",
+    "textTemplate": "Hello {{name}}. New tests for {{exam}} are now live.",
+    "variables": ["name", "exam"],
+    "isActive": true,
+    "version": 1,
+    "createdAt": "2026-03-30T12:15:00.000Z",
+    "updatedAt": "2026-03-30T12:15:00.000Z"
+  }
+]
+
+--------------------------------------------------------------------------------
+3) GET TEMPLATE BY ID
+--------------------------------------------------------------------------------
+GET /api/v1/admin/newsletter/templates/:id
+
+Success Response (200)
+{
+  "_id": "67f01b5a3b81d17dc8d5c611",
+  "name": "Monthly Exam Newsletter",
+  "key": "newsletter.monthly-exam",
+  "category": "newsletter",
+  "subjectTemplate": "Hi {{name}}, latest updates for {{exam}}",
+  "htmlTemplate": "<h1>Hello {{name}}</h1><p>New tests for {{exam}} are now live.</p>",
+  "textTemplate": "Hello {{name}}. New tests for {{exam}} are now live.",
+  "variables": ["name", "exam"],
+  "isActive": true,
+  "version": 1,
+  "createdAt": "2026-03-30T12:15:00.000Z",
+  "updatedAt": "2026-03-30T12:15:00.000Z"
+}
+
+Error
+- 404: Template not found
+
+--------------------------------------------------------------------------------
+4) UPDATE TEMPLATE
+--------------------------------------------------------------------------------
+PATCH /api/v1/admin/newsletter/templates/:id
+
+Request Body (partial allowed)
+{
+  "subjectTemplate": "Hi {{name}}, important {{exam}} updates",
+  "htmlTemplate": "<h2>Hello {{name}}</h2><p>Important updates for {{exam}}.</p>",
+  "isActive": true
+}
+
+Success Response (200)
+{
+  "_id": "67f01b5a3b81d17dc8d5c611",
+  "name": "Monthly Exam Newsletter",
+  "key": "newsletter.monthly-exam",
+  "category": "newsletter",
+  "subjectTemplate": "Hi {{name}}, important {{exam}} updates",
+  "htmlTemplate": "<h2>Hello {{name}}</h2><p>Important updates for {{exam}}.</p>",
+  "textTemplate": "Hello {{name}}. New tests for {{exam}} are now live.",
+  "variables": ["name", "exam"],
+  "isActive": true,
+  "version": 2,
+  "updatedBy": "67efef2a1a38a56a5fcf2201",
+  "updatedAt": "2026-03-30T12:20:00.000Z"
+}
+
+--------------------------------------------------------------------------------
+5) PREVIEW TEMPLATE
+--------------------------------------------------------------------------------
+POST /api/v1/admin/newsletter/templates/:id/preview
+
+Request Body
+{
+  "data": {
+    "name": "Amit",
+    "exam": "JEE Main 2026"
+  }
+}
+
+Success Response (200)
+{
+  "subject": "Hi Amit, important JEE Main 2026 updates",
+  "html": "<h2>Hello Amit</h2><p>Important updates for JEE Main 2026.</p>",
+  "text": "Hello Amit. New tests for JEE Main 2026 are now live.",
+  "usedVariables": ["name", "exam"]
+}
+
+--------------------------------------------------------------------------------
+6) TEST SEND TEMPLATE
+--------------------------------------------------------------------------------
+POST /api/v1/admin/newsletter/templates/:id/test-send
+
+Request Body
+{
+  "email": "qa@example.com",
+  "recipientName": "QA User",
+  "data": {
+    "exam": "NEET"
+  }
+}
+
+Success Response (200)
+{
+  "success": true,
+  "message": "Test email sent successfully",
+  "data": {
+    "email": "qa@example.com",
+    "subject": "Hi QA User, important NEET updates"
+  }
+}
+
+Error
+- 400: Failed to send test email
+
+--------------------------------------------------------------------------------
+7) CREATE CAMPAIGN (DRAFT)
+--------------------------------------------------------------------------------
+POST /api/v1/admin/newsletter/campaigns
+
+Request Body (All users)
+{
+  "name": "April Newsletter Push",
+  "templateId": "67f01b5a3b81d17dc8d5c611",
+  "audienceType": "all-users",
+  "templateData": {
+    "exam": "JEE Main 2026"
+  }
+}
+
+Request Body (Custom list)
+{
+  "name": "Custom Invoice Campaign",
+  "templateId": "67f01b5a3b81d17dc8d5c611",
+  "audienceType": "custom-list",
+  "recipientEmails": ["student1@example.com", "student2@example.com"],
+  "templateData": {
+    "exam": "NEET"
+  }
+}
+
+Success Response (201)
+{
+  "_id": "67f021f13b81d17dc8d5c790",
+  "name": "April Newsletter Push",
+  "templateId": "67f01b5a3b81d17dc8d5c611",
+  "audienceType": "all-users",
+  "recipientEmails": [],
+  "templateData": {
+    "exam": "JEE Main 2026"
+  },
+  "status": "draft",
+  "totalRecipients": 0,
+  "sentCount": 0,
+  "failedCount": 0,
+  "processedCount": 0,
+  "isPaused": false,
+  "cancelRequested": false,
+  "recipientLogs": [],
+  "createdBy": "67efef2a1a38a56a5fcf2201"
+}
+
+Common Errors
+- 400: recipientEmails are required for custom-list audience
+- 400: Template is inactive
+- 404: Template not found
+
+--------------------------------------------------------------------------------
+8) LIST CAMPAIGNS
+--------------------------------------------------------------------------------
+GET /api/v1/admin/newsletter/campaigns
+
+Success Response (200)
+[
+  {
+    "_id": "67f021f13b81d17dc8d5c790",
+    "name": "April Newsletter Push",
+    "templateId": {
+      "_id": "67f01b5a3b81d17dc8d5c611",
+      "name": "Monthly Exam Newsletter",
+      "key": "newsletter.monthly-exam",
+      "category": "newsletter"
+    },
+    "audienceType": "all-users",
+    "status": "draft",
+    "totalRecipients": 0,
+    "sentCount": 0,
+    "failedCount": 0,
+    "processedCount": 0
+  }
+]
+
+--------------------------------------------------------------------------------
+9) GET CAMPAIGN BY ID
+--------------------------------------------------------------------------------
+GET /api/v1/admin/newsletter/campaigns/:id
+
+Success Response (200)
+{
+  "_id": "67f021f13b81d17dc8d5c790",
+  "name": "April Newsletter Push",
+  "templateId": "67f01b5a3b81d17dc8d5c611",
+  "audienceType": "all-users",
+  "templateData": {
+    "exam": "JEE Main 2026"
+  },
+  "status": "draft",
+  "totalRecipients": 0,
+  "sentCount": 0,
+  "failedCount": 0,
+  "processedCount": 0,
+  "recipientLogs": []
+}
+
+Error
+- 404: Campaign not found
+
+--------------------------------------------------------------------------------
+10) SEND CAMPAIGN (QUEUE TO REDIS)
+--------------------------------------------------------------------------------
+POST /api/v1/admin/newsletter/campaigns/:id/send
+
+Request Body (optional fields)
+{
+  "batchLimit": 1000,
+  "chunkSize": 50,
+  "maxRetries": 2,
+  "retryDelayMs": 500
+}
+
+Success Response (200)
+{
+  "success": true,
+  "message": "Campaign queued for background sending",
+  "data": {
+    "campaignId": "67f021f13b81d17dc8d5c790",
+    "totalRecipients": 1000,
+    "chunkSize": 50,
+    "maxRetries": 2,
+    "retryDelayMs": 500
+  }
+}
+
+Common Errors
+- 400: Campaign cannot be sent in queued/sending/paused/completed status
+- 400: No recipients found for campaign
+- 404: Template or campaign not found
+
+--------------------------------------------------------------------------------
+11) GET CAMPAIGN PROGRESS
+--------------------------------------------------------------------------------
+GET /api/v1/admin/newsletter/campaigns/:id/progress
+
+Success Response (200)
+{
+  "success": true,
+  "data": {
+    "campaignId": "67f021f13b81d17dc8d5c790",
+    "status": "sending",
+    "totalRecipients": 1000,
+    "processedCount": 300,
+    "sentCount": 292,
+    "failedCount": 8,
+    "progressPercent": 30,
+    "startedAt": "2026-03-30T13:00:00.000Z",
+    "queuedAt": "2026-03-30T12:59:50.000Z",
+    "lastProcessedAt": "2026-03-30T13:01:15.000Z",
+    "completedAt": null,
+    "isPaused": false,
+    "cancelRequested": false,
+    "queueState": "active"
+  }
+}
+
+Possible queueState values
+- not-in-queue
+- waiting
+- active
+- completed
+- failed
+- delayed
+- prioritized
+- queue-not-initialized
+
+--------------------------------------------------------------------------------
+12) PAUSE CAMPAIGN
+--------------------------------------------------------------------------------
+POST /api/v1/admin/newsletter/campaigns/:id/pause
+
+Success Response (200)
+{
+  "success": true,
+  "message": "Campaign paused successfully"
+}
+
+Error
+- 400: Campaign cannot be paused in completed/cancelled status
+
+--------------------------------------------------------------------------------
+13) RESUME CAMPAIGN
+--------------------------------------------------------------------------------
+POST /api/v1/admin/newsletter/campaigns/:id/resume
+
+Success Response (200)
+{
+  "success": true,
+  "message": "Campaign resumed and queued successfully"
+}
+
+Error
+- 400: Only paused campaigns can be resumed
+
+--------------------------------------------------------------------------------
+14) CANCEL CAMPAIGN
+--------------------------------------------------------------------------------
+POST /api/v1/admin/newsletter/campaigns/:id/cancel
+
+Success Response (200)
+{
+  "success": true,
+  "message": "Campaign cancelled successfully"
+}
+
+Error
+- 400: Campaign cannot be cancelled in completed/cancelled status
+
+--------------------------------------------------------------------------------
+CATEGORY ENUM VALUES FOR TEMPLATE
+--------------------------------------------------------------------------------
+- newsletter
+- invoice
+- transactional
+- other
+
+--------------------------------------------------------------------------------
+AUDIENCE ENUM VALUES FOR CAMPAIGN
+--------------------------------------------------------------------------------
+- all-users
+- custom-list
+
+--------------------------------------------------------------------------------
+CAMPAIGN STATUS VALUES
+--------------------------------------------------------------------------------
+- draft
+- queued
+- sending
+- paused
+- completed
+- failed
+- cancelled
+
+--------------------------------------------------------------------------------
+FRONTEND IMPLEMENTATION NOTES
+--------------------------------------------------------------------------------
+1. Template editor
+- Let admin define subjectTemplate and htmlTemplate with placeholders like {{name}}.
+- Show available variables list.
+
+2. Campaign create screen
+- Select template
+- Select audience type
+- For custom-list, collect recipient emails
+- Optional templateData map
+
+3. Campaign run screen
+- Call send endpoint once
+- Poll progress endpoint every 3-5 seconds until status is completed/failed/cancelled/paused
+
+4. Control buttons by status
+- draft: Send
+- queued/sending: Pause, Cancel
+- paused: Resume, Cancel
+- completed/failed/cancelled: View logs
+
+5. Logs UI
+- Use recipientLogs from campaign details/progress for per-email delivery status
+- Show attempts and error message if failed
+
+--------------------------------------------------------------------------------
+REDIS ENV REQUIRED FOR QUEUE
+--------------------------------------------------------------------------------
+Either set REDIS_URL
+OR set:
+- REDIS_HOST
+- REDIS_PORT
+- REDIS_PASSWORD (optional)
+- REDIS_DB (optional)
+
+Optional:
+- NEWSLETTER_QUEUE_CONCURRENCY
