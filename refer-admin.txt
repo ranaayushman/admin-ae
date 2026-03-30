@@ -1,0 +1,545 @@
+================================================================================
+REFERRAL SYSTEM - ADMIN ENDPOINTS DOCUMENTATION
+================================================================================
+
+BASE URL: http://localhost:3000/api/v1
+AUTHENTICATION: Bearer JWT Token with Admin Role (Required for all endpoints)
+AUTHORIZATION: Must have "admin" role in token
+
+================================================================================
+1. GET /admin/referrals
+================================================================================
+DESCRIPTION: Get all referrals across platform with filtering, sorting, pagination
+
+METHOD: GET
+HEADERS:
+  Authorization: Bearer <admin_jwt_token>
+  Content-Type: application/json
+
+QUERY PARAMETERS:
+  status=pending|rewarded|disqualified (filter by status)
+  referrerId=<userId> (filter by referrer)
+  referredId=<userId> (filter by referred user)
+  page=1 (pagination, default 1)
+  limit=20 (items per page, default 20)
+  sortBy=createdAt|rewardedAt (sort field)
+  sortOrder=asc|desc (sort direction)
+
+REQUEST BODY: None
+
+RESPONSE (200 OK):
+{
+  "data": [
+    {
+      "_id": "507f1f77bcf86cd799439012",
+      "referrerUserId": "507f1f77bcf86cd799439010",
+      "referrerName": "Priya Singh",
+      "referrerEmail": "priya@example.com",
+      "referredUserId": "507f1f77bcf86cd799439013",
+      "referredName": "Amrita Sharma",
+      "referredEmail": "amrita@example.com",
+      "status": "rewarded",
+      "referralCodeUsed": "AEAB12CD",
+      "pointsAwarded": 50,
+      "firstSuccessfulPaymentId": "507f1f77bcf86cd799439014",
+      "qualifiedAt": "2024-03-26T12:00:00Z",
+      "rewardedAt": "2024-03-26T15:45:00Z",
+      "createdAt": "2024-03-25T10:00:00Z",
+      "updatedAt": "2024-03-26T15:45:00Z"
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "limit": 20,
+  "totalPages": 8
+}
+
+EXAMPLE REQUESTS:
+  GET /admin/referrals?status=pending
+  GET /admin/referrals?referrerId=507f1f77bcf86cd799439010
+  GET /admin/referrals?status=rewarded&page=2&limit=50&sortBy=rewardedAt&sortOrder=desc
+
+
+================================================================================
+2. GET /admin/referrals/:referralId
+================================================================================
+DESCRIPTION: Get detailed information about a specific referral
+
+METHOD: GET
+HEADERS:
+  Authorization: Bearer <admin_jwt_token>
+  Content-Type: application/json
+
+URL PARAMETERS:
+  referralId: Referral tracking record ID (24 hex chars)
+
+REQUEST BODY: None
+
+RESPONSE (200 OK):
+{
+  "_id": "507f1f77bcf86cd799439012",
+  "referrerUserId": "507f1f77bcf86cd799439010",
+  "referrer": {
+    "name": "Priya Singh",
+    "email": "priya@example.com",
+    "phone": "+91 9876543210",
+    "examTargets": ["NEET"],
+    "pointsBalance": 250,
+    "successfulReferralsCount": 5
+  },
+  "referredUserId": "507f1f77bcf86cd799439013",
+  "referred": {
+    "name": "Amrita Sharma",
+    "email": "amrita@example.com",
+    "phone": "+91 9876543211",
+    "examTargets": ["NEET", "JEE"],
+    "registrationDate": "2024-03-25T10:00:00Z"
+  },
+  "referralCodeUsed": "AEAB12CD",
+  "status": "rewarded",
+  "pointsAwarded": 50,
+  "firstSuccessfulPaymentId": "507f1f77bcf86cd799439014",
+  "paymentDetails": {
+    "amount": 4999,
+    "packageName": "NEET Complete Course",
+    "paymentDate": "2024-03-26T12:00:00Z"
+  },
+  "qualifiedAt": "2024-03-26T12:00:00Z",
+  "rewardedAt": "2024-03-26T15:45:00Z",
+  "disqualifiedAt": null,
+  "disqualifyReason": null,
+  "metadata": {
+    "linkedAt": "2024-03-25T10:00:00Z",
+    "ipAddress": "192.168.1.1"
+  },
+  "createdAt": "2024-03-25T10:00:00Z",
+  "updatedAt": "2024-03-26T15:45:00Z"
+}
+
+ERROR RESPONSE (404):
+{
+  "statusCode": 404,
+  "message": "Referral not found",
+  "error": "Not Found"
+}
+
+
+================================================================================
+3. PATCH /admin/referrals/:referralId/disqualify
+================================================================================
+DESCRIPTION: Disqualify a referral due to fraud, abuse, or policy violation
+
+METHOD: PATCH
+HEADERS:
+  Authorization: Bearer <admin_jwt_token>
+  Content-Type: application/json
+
+URL PARAMETERS:
+  referralId: Referral tracking record ID (24 hex chars)
+
+REQUEST BODY:
+{
+  "reason": "Multiple accounts detected from same IP",
+  "notes": "User created 3 accounts with different emails but same IP address"
+}
+
+REQUIRED FIELDS:
+  - reason: Brief reason for disqualification
+
+OPTIONAL FIELDS:
+  - notes: Detailed explanation for admin records
+
+RESPONSE (200 OK):
+{
+  "_id": "507f1f77bcf86cd799439012",
+  "referrerUserId": "507f1f77bcf86cd799439010",
+  "referredUserId": "507f1f77bcf86cd799439013",
+  "status": "disqualified",
+  "disqualifyReason": "Multiple accounts detected from same IP",
+  "disqualifiedAt": "2024-03-27T10:30:00Z",
+  "pointsRecovered": 50,
+  "message": "Referral disqualified successfully and points recovered from referrer"
+}
+
+BEHAVIOR:
+  - Changes status to "disqualified"
+  - Sets disqualifiedAt timestamp
+  - Deducts points from referrer if already awarded
+  - Creates audit log entry
+  - Optionally notifies admin/compliance team
+
+ERROR RESPONSE (400):
+{
+  "statusCode": 400,
+  "message": "Reason is required",
+  "error": "Bad Request"
+}
+
+ERROR RESPONSE (404):
+{
+  "statusCode": 404,
+  "message": "Referral not found",
+  "error": "Not Found"
+}
+
+
+================================================================================
+4. PATCH /admin/users/:userId/points
+================================================================================
+DESCRIPTION: Manually adjust a user's points balance (for corrections, rewards, penalties)
+
+METHOD: PATCH
+HEADERS:
+  Authorization: Bearer <admin_jwt_token>
+  Content-Type: application/json
+
+URL PARAMETERS:
+  userId: User ID (24 hex chars)
+
+REQUEST BODY:
+{
+  "pointsDelta": 50,
+  "reason": "bonus_campaign",
+  "description": "Bonus points for June referral campaign"
+}
+
+OR (for deduction):
+{
+  "pointsDelta": -25,
+  "reason": "contested_referral",
+  "description": "Deduction for contested referral from Support ticket #1234"
+}
+
+REQUIRED FIELDS:
+  - pointsDelta: Number of points to add/subtract (can be negative)
+  - reason: One of [bonus_campaign, correction, contested_referral, penalty, recovery]
+  - description: Detailed explanation for audit trail
+
+RESPONSE (200 OK):
+{
+  "userId": "507f1f77bcf86cd799439010",
+  "pointsBalanceBefore": 150,
+  "pointsDelta": 50,
+  "pointsBalanceAfter": 200,
+  "transactionId": "507f1f77bcf86cd799439099",
+  "idempotencyKey": "admin_adjust:507f1f77bcf86cd799439010:1711430400000",
+  "reason": "bonus_campaign",
+  "processedAt": "2024-03-27T11:00:00Z",
+  "processedBy": "admin@example.com"
+}
+
+CREATES AUDIT LOG:
+  - Admin email/id who made adjustment
+  - Timestamp of adjustment
+  - Old and new balances
+  - Reason and description
+  - All future audits reference this transaction ID
+
+
+================================================================================
+5. GET /admin/referrals/stats
+================================================================================
+DESCRIPTION: Get referral system statistics and analytics
+
+METHOD: GET
+HEADERS:
+  Authorization: Bearer <admin_jwt_token>
+  Content-Type: application/json
+
+QUERY PARAMETERS (Optional):
+  startDate=2024-03-01 (ISO date format)
+  endDate=2024-03-31 (ISO date format)
+  granularity=daily|weekly|monthly (default: overall)
+
+REQUEST BODY: None
+
+RESPONSE (200 OK):
+{
+  "overview": {
+    "totalReferrals": 450,
+    "pendingReferrals": 120,
+    "rewardedReferrals": 315,
+    "disqualifiedReferrals": 15,
+    "conversionRate": "70%",
+    "averageTimeToConversion": "4.2 days"
+  },
+  "pointsMetrics": {
+    "totalPointsIssued": 15750,
+    "totalPointsRedeemed": 5200,
+    "totalPointsOutstanding": 10550,
+    "averagePointsPerReferral": 50
+  },
+  "revenueMetrics": {
+    "revenueFromReferrals": 1575000,
+    "averageOrderValue": 3500,
+    "referredUserLifetimeValue": 4200,
+    "costPerAcquisition": 105
+  },
+  "topReferrers": [
+    {
+      "userId": "507f1f77bcf86cd799439010",
+      "name": "Priya Singh",
+      "email": "priya@example.com",
+      "successfulReferrals": 25,
+      "pointsEarned": 1500,
+      "revenue": 87500
+    }
+  ],
+  "dailyTrends": [
+    {
+      "date": "2024-03-25",
+      "newReferrals": 12,
+      "conversions": 8,
+      "pointsIssued": 450,
+      "revenue": 35000
+    }
+  ]
+}
+
+METRICS EXPLAINED:
+  - conversionRate: % of referred users who made first purchase
+  - averageTimeToConversion: Avg days from referral to first purchase
+  - costPerAcquisition: Points cost / Revenue generated
+  - referredUserLifetimeValue: Avg total spending by referred users
+
+
+================================================================================
+6. GET /admin/referrals/leaderboard
+================================================================================
+DESCRIPTION: Get top referrers ranked by successful referrals or points earned
+
+METHOD: GET
+HEADERS:
+  Authorization: Bearer <admin_jwt_token>
+  Content-Type: application/json
+
+QUERY PARAMETERS:
+  rankBy=referrals|points|revenue (default: referrals)
+  limit=50 (max limit 500)
+  period=all|thisMonth|thisQuarter|thisYear (default: all)
+
+REQUEST BODY: None
+
+RESPONSE (200 OK):
+{
+  "leaderboard": [
+    {
+      "rank": 1,
+      "userId": "507f1f77bcf86cd799439010",
+      "name": "Priya Singh",
+      "email": "priya@example.com",
+      "phone": "+91 9876543210",
+      "successfulReferrals": 25,
+      "pointsEarned": 1500,
+      "revenueGenerated": 87500,
+      "recentActivity": "2024-03-27T09:15:00Z"
+    },
+    {
+      "rank": 2,
+      "userId": "507f1f77bcf86cd799439011",
+      "name": "Rajesh Kumar",
+      "email": "rajesh@example.com",
+      "phone": "+91 9876543211",
+      "successfulReferrals": 18,
+      "pointsEarned": 1050,
+      "revenueGenerated": 63000,
+      "recentActivity": "2024-03-26T14:30:00Z"
+    },
+    {
+      "rank": 3,
+      "userId": "507f1f77bcf86cd799439012",
+      "name": "Amrita Sharma",
+      "email": "amrita@example.com",
+      "phone": "+91 9876543212",
+      "successfulReferrals": 15,
+      "pointsEarned": 850,
+      "revenueGenerated": 52500,
+      "recentActivity": "2024-03-25T18:45:00Z"
+    }
+  ],
+  "generatedAt": "2024-03-27T12:00:00Z"
+}
+
+EXAMPLE REQUESTS:
+  GET /admin/referrals/leaderboard?rankBy=revenue&limit=100
+  GET /admin/referrals/leaderboard?period=thisMonth&rankBy=points
+
+
+================================================================================
+7. POST /admin/referrals/verify-fraud
+================================================================================
+DESCRIPTION: Check if a referral might be fraudulent based on patterns
+
+METHOD: POST
+HEADERS:
+  Authorization: Bearer <admin_jwt_token>
+  Content-Type: application/json
+
+REQUEST BODY:
+{
+  "referralId": "507f1f77bcf86cd799439012",
+  "checkSuspiciousPatterns": true,
+  "compareWithReferrer": true
+}
+
+RESPONSE (200 OK):
+{
+  "referralId": "507f1f77bcf86cd799439012",
+  "fraudRiskScore": 35,
+  "riskLevel": "low",
+  "flags": [
+    "Fast conversion (3 hours)",
+    "Referred user uses same IP as referrer"
+  ],
+  "recommendations": [
+    "Monitor for similar patterns from same referrer",
+    "Consider requiring phone verification for referred user"
+  ]
+}
+
+RISK LEVELS:
+  - low (0-30): Normal referral pattern
+  - medium (31-70): Some suspicious indicators, monitor closely
+  - high (71-100): Strong fraud indicators, recommend disqualification
+
+
+================================================================================
+ERROR RESPONSES
+================================================================================
+
+401 UNAUTHORIZED:
+{
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "Unauthorized"
+}
+Cause: Missing or invalid JWT token
+
+403 FORBIDDEN:
+{
+  "statusCode": 403,
+  "message": "Admin access required",
+  "error": "Forbidden"
+}
+Cause: User doesn't have admin role
+
+400 BAD REQUEST:
+{
+  "statusCode": 400,
+  "message": "Invalid request data",
+  "error": "Bad Request"
+}
+Cause: Missing required fields or invalid format
+
+404 NOT FOUND:
+{
+  "statusCode": 404,
+  "message": "Resource not found",
+  "error": "Not Found"
+}
+Cause: Referral or User doesn't exist
+
+422 UNPROCESSABLE ENTITY:
+{
+  "statusCode": 422,
+  "message": "Cannot disqualify rewarded referral without points",
+  "error": "Unprocessable Entity"
+}
+Cause: Invalid business logic (e.g., user doesn't have points to deduct)
+
+500 INTERNAL SERVER ERROR:
+{
+  "statusCode": 500,
+  "message": "Internal server error",
+  "error": "Internal Server Error"
+}
+Cause: Server-side error occurred
+
+
+================================================================================
+ADMIN WORKFLOWS & USE CASES
+================================================================================
+
+1. INVESTIGATING A SUSPICIOUS REFERRAL:
+   - Call GET /admin/referrals/:referralId
+   - Review referrer and referred user details
+   - Note same IP, similar signup patterns, etc.
+   - Call POST /admin/referrals/verify-fraud for risk score
+   - If fraud confirmed, call PATCH /admin/referrals/:referralId/disqualify
+
+2. HANDLING SUPPORT TICKET (CONTESTED REFERRAL):
+   - Call GET /admin/referrals/:referralId to get details
+   - Review transaction history and points awarded
+   - Disqualify if customer escalates
+   - Call PATCH /admin/users/{referrerId}/points to recover points
+   - Call PATCH /admin/users/{referredId}/points to adjust as needed
+
+3. BONUS CAMPAIGN - REWARD TOP REFERRERS:
+   - Call GET /admin/referrals/leaderboard?period=thisMonth&limit=10
+   - Identify top 3 referrers
+   - Call PATCH /admin/users/{userId}/points for each with bonus points
+   - Sends notification to user (implementation pending)
+
+4. QUARTERLY REFERRAL PERFORMANCE REVIEW:
+   - Call GET /admin/referrals/stats?granularity=monthly
+   - Review conversion rates, revenue trends
+   - Identify periods with high churn or fraud
+   - Evaluate referral rewards ROI
+   - Adjust point values if needed
+
+5. COMPLIANCE & AUDIT REQUIREMENTS:
+   - Call GET /admin/referrals with date filters
+   - Export all transactions with reasons
+   - Review admin_adjustment transactions
+   - Verify all disqualifications have reasons documented
+   - Generate audit report for finance/legal
+
+
+================================================================================
+AUDIT TRAIL REQUIREMENTS
+================================================================================
+
+All admin actions create audit log entries with:
+  - Admin user ID and email
+  - Action taken (disqualify, adjust points, etc.)
+  - Timestamp (ISO 8601)
+  - Old values and new values
+  - Reason provided
+  - IP address of admin
+  - Status (success/failed)
+
+Audit entries are immutable and separately stored for compliance.
+Accessed via GET /admin/audit-logs with same filtering as referrals.
+
+
+================================================================================
+RATE LIMITS
+================================================================================
+
+Admin endpoints have elevated rate limits:
+  - List/Read endpoints: 10,000 requests per hour
+  - Write/Modification endpoints: 1,000 requests per hour
+  - Stats/Analytics endpoints: 1,000 requests per hour
+
+Rate limit headers included in response:
+  X-RateLimit-Limit: 10000
+  X-RateLimit-Remaining: 9999
+  X-RateLimit-Reset: 1711516800
+
+
+================================================================================
+FUTURE ENHANCEMENTS (TODO)
+================================================================================
+
+1. [ ] Bulk disqualification endpoint
+2. [ ] Export referral data to CSV
+3. [ ] Automated fraud detection with ML
+4. [ ] A/B testing different reward amounts
+5. [ ] Referral campaign management (enable/disable by date)
+6. [ ] Integration with analytics/BI tools
+7. [ ] SMS/Email notifications for admins on high-risk referrals
+8. [ ] Referral URL generation with tracking
+9. [ ] Geographic distribution analytics
+10. [ ] Competitor analysis of referral programs
+
+================================================================================

@@ -1,6 +1,11 @@
 import apiClient, { handleApiError } from "./api.client";
 
-export type TestStatus = "draft" | "published";
+export type TestStatus =
+  | "draft"
+  | "published"
+  | "UPCOMING"
+  | "LIVE"
+  | "COMPLETED";
 export type QuestionSelectionMode = "random" | "selected" | "mixed";
 export type QuestionDeliveryPolicy = "fixed-per-user" | "fresh-each-attempt";
 
@@ -215,8 +220,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 const normalizeStatus = (status: unknown): TestStatus => {
-  const s = String(status ?? "").toLowerCase();
-  return s === "published" ? "published" : "draft";
+  const raw = String(status ?? "");
+  const upper = raw.toUpperCase();
+
+  if (upper === "UPCOMING" || upper === "LIVE" || upper === "COMPLETED") {
+    return upper as TestStatus;
+  }
+
+  const lower = raw.toLowerCase();
+  return lower === "published" ? "published" : "draft";
 };
 
 const normalizeListItem = (item: Record<string, unknown>): TestListItem => {

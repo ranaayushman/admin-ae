@@ -8,6 +8,22 @@ import { logger } from "@/lib/logger";
 
 if (!process.env.NEXT_PUBLIC_API_URL) {}
 
+const getAxiosErrorMeta = (error: AxiosError) => {
+  const status = error.response?.status ?? "NO_RESPONSE";
+  const method = error.config?.method?.toUpperCase() ?? "UNKNOWN_METHOD";
+  const baseURL = error.config?.baseURL ?? process.env.NEXT_PUBLIC_API_URL ?? "";
+  const path = error.config?.url ?? "UNKNOWN_URL";
+  const responseData = error.response?.data;
+
+  return {
+    status,
+    method,
+    url: `${baseURL}${path}`,
+    message: error.message || "Unknown API error",
+    responseData,
+  };
+};
+
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "",
@@ -105,10 +121,13 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = tokenManager.getRefreshToken();
 
-        if (!refreshToken) {          processQueue(new Error("No refresh token"), null);
+        if (!refreshToken) {
+          processQueue(new Error("No refresh token"), null);
           forceLogout();
           return Promise.reject(error);
-        }        const response = await axios.post<{
+        }
+
+        const response = await axios.post<{
           accessToken: string;
           refreshToken?: string;
         }>(`${process.env.NEXT_PUBLIC_API_URL || ""}/auth/refresh`, {
@@ -141,11 +160,7 @@ apiClient.interceptors.response.use(
     }
 
     // Handle other errors
-    logger.error("❌ API Response Error", {
-      status: error.response?.status,
-      url: error.config?.url,
-      message: error.message,
-    });
+    logger.error("❌ API Response Error", getAxiosErrorMeta(error));
 
     return Promise.reject(error);
   }

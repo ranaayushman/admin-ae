@@ -75,6 +75,8 @@ const EXAM_PATTERNS: Record<string, { questionCount: number; duration: number; s
 };
 
 export default function TestSeriesPage() {
+  type StatusFilter = "all" | "UPCOMING" | "LIVE" | "COMPLETED";
+
   const [tests, setTests] = useState<TestListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -96,7 +98,7 @@ export default function TestSeriesPage() {
     subjectQuestionCounts: {},
   });
 
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -187,8 +189,29 @@ export default function TestSeriesPage() {
 
   const stats = {
     total: pagination.total,
-    published: tests.filter((t) => t.status === "published").length,
-    draft: tests.filter((t) => t.status === "draft").length,
+    live: tests.filter((t) => String(t.status).toUpperCase() === "LIVE").length,
+    upcoming: tests.filter((t) => String(t.status).toUpperCase() === "UPCOMING").length,
+  };
+
+  const getStatusBadgeVariant = (status: TestListItem["status"]) => {
+    const normalized = String(status).toUpperCase();
+    if (normalized === "LIVE" || normalized === "PUBLISHED") {
+      return "active" as const;
+    }
+    if (normalized === "UPCOMING") {
+      return "scheduled" as const;
+    }
+    if (normalized === "COMPLETED") {
+      return "expired" as const;
+    }
+    return "draft" as const;
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    const validStatuses: StatusFilter[] = ["all", "UPCOMING", "LIVE", "COMPLETED"];
+    if (validStatuses.includes(value as StatusFilter)) {
+      setStatusFilter(value as StatusFilter);
+    }
   };
 
   const submitAutoCreate = async () => {
@@ -289,15 +312,15 @@ export default function TestSeriesPage() {
             <div className="text-2xl font-bold mt-1">{stats.total}</div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600">Published</div>
+            <div className="text-sm text-gray-600">Live</div>
             <div className="text-2xl font-bold text-green-600 mt-1">
-              {stats.published}
+              {stats.live}
             </div>
           </Card>
           <Card className="p-4">
-            <div className="text-sm text-gray-600">Drafts</div>
-            <div className="text-2xl font-bold text-yellow-600 mt-1">
-              {stats.draft}
+            <div className="text-sm text-gray-600">Upcoming</div>
+            <div className="text-2xl font-bold text-blue-600 mt-1">
+              {stats.upcoming}
             </div>
           </Card>
         </div>
@@ -310,14 +333,15 @@ export default function TestSeriesPage() {
               className="max-w-xs"
             />
             <span className="text-sm font-medium text-gray-700">Status:</span>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="published">Published</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="UPCOMING">Upcoming</SelectItem>
+                <SelectItem value="LIVE">Live</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -348,9 +372,7 @@ export default function TestSeriesPage() {
                           {test.title}
                         </h3>
                         <StatusBadge
-                          status={
-                            test.status === "published" ? "active" : "draft"
-                          }
+                          status={getStatusBadgeVariant(test.status)}
                         />
                       </div>
                       <p className="text-sm text-gray-600">{test.category}</p>

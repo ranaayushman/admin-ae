@@ -188,6 +188,8 @@ export default function EditTestSeriesPage() {
       }
 
       // Build payload based on mode
+      const selectedQuestionIds = selectedQuestions.map((q) => q._id);
+
       const payload: any = {
         title: data.title,
         description: data.description,
@@ -200,21 +202,21 @@ export default function EditTestSeriesPage() {
         shuffleQuestions: data.shuffleQuestions,
         questionSelectionMode: selectionMode,
         questionDeliveryPolicy: deliveryPolicy,
+        questions: selectionMode === "random" ? [] : selectedQuestionIds,
       };
 
       if (selectionMode === "random") {
         payload.questionsPerUser = Number(questionsPerUser);
+        payload.selectedQuestionIds = [];
         if (ensureSubjectDistribution) {
           payload.ensureSubjectDistribution = true;
           payload.subjectQuestionCounts = data.subjectQuestionCounts || {};
         }
       } else if (selectionMode === "selected") {
-        payload.selectedQuestionIds = selectedQuestions.map((q) => q._id);
-        payload.questions = selectedQuestions;
+        payload.selectedQuestionIds = selectedQuestionIds;
       } else if (selectionMode === "mixed") {
         payload.questionsPerUser = Number(questionsPerUser);
-        payload.selectedQuestionIds = selectedQuestions.map((q) => q._id);
-        payload.questions = selectedQuestions;
+        payload.selectedQuestionIds = selectedQuestionIds;
         if (ensureSubjectDistribution) {
           payload.ensureSubjectDistribution = true;
           payload.subjectQuestionCounts = data.subjectQuestionCounts || {};

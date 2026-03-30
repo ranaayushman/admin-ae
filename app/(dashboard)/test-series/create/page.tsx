@@ -185,6 +185,8 @@ export default function CreateTestSeriesPage() {
     }
 
     try {
+      const selectedQuestionIds = selectedQuestions.map((q) => q._id);
+
       const payload: Record<string, unknown> = {
         title: data.title,
         description: data.description,
@@ -211,15 +213,13 @@ export default function CreateTestSeriesPage() {
         selectedQuestionIds:
           data.questionSelectionMode === "selected" ||
           data.questionSelectionMode === "mixed"
-            ? selectedQuestions.map((q) => q._id)
-            : undefined,
+            ? selectedQuestionIds
+            : [],
         ensureSubjectDistribution: data.ensureSubjectDistribution,
         subjectQuestionCounts: data.subjectQuestionCounts || undefined,
-        // Traditional: questions array
+        // Always send questions array for all modes
         questions:
-          data.questionSelectionMode === "selected"
-            ? selectedQuestions.map((q) => q._id)
-            : undefined,
+          data.questionSelectionMode === "random" ? [] : selectedQuestionIds,
       };
 
       const result = await testService.createTest(payload as any);
