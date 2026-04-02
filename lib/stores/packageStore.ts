@@ -310,6 +310,7 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
   addTestToPackage: async (packageId: string, testId: string) => {
     try {
       const response = await addTestToPackageApi(packageId, testId);
+      const addedTests = response.addedTests ?? [];
 
       // Update selected package if it's the one being modified
       const selectedPackage = get().selectedPackage;
@@ -317,7 +318,7 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
         set({
           selectedPackage: {
             ...selectedPackage,
-            totalTests: response.data.totalTests,
+            totalTests: response.data?.totalTests ?? selectedPackage.totalTests + addedTests.length,
           },
         });
       }
@@ -349,7 +350,7 @@ export const usePackageStore = create<PackageStore>((set, get) => ({
           selectedPackage: {
             ...selectedPackage,
             tests: updatedTests,
-            totalTests: response.data.totalTests,
+            totalTests: response.data?.totalTests ?? updatedTests.length,
           },
         });
       }

@@ -291,9 +291,23 @@ export const getPackages = async (
  * Get a single package by ID with populated tests
  */
 export const getPackageById = async (id: string): Promise<PackageDetails> => {
+  const lookupPaths = [`/packages/id/${id}`, `/packages/${id}`];
+
   try {
-    const response = await apiClient.get<GetPackageResponse>(`/packages/${id}`);
-    return response.data.data;
+    for (const path of lookupPaths) {
+      try {
+        const response = await apiClient.get<GetPackageResponse>(path);
+        return response.data.data;
+      } catch (error) {
+        // Try the next known lookup shape before surfacing the error.
+        if (path !== lookupPaths[lookupPaths.length - 1]) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error("Unable to load package details");
   } catch (error) {
     console.error("Error fetching package:", error);
     throw new Error(handleApiError(error));
@@ -336,7 +350,9 @@ export const deletePackage = async (id: string): Promise<void> => {
 export interface AddTestResponse {
   success: boolean;
   message: string;
-  data: {
+  addedTests?: string[];
+  alreadyExisted?: string[];
+  data?: {
     _id: string;
     title: string;
     totalTests: number;
@@ -353,7 +369,10 @@ export const addTestToPackage = async (
 ): Promise<AddTestResponse> => {
   try {
     const response = await apiClient.post<AddTestResponse>(
-      `/packages/${packageId}/tests/${testId}`
+      `/packages/${packageId}/tests`,
+      {
+        testIds: [testId],
+      }
     );
     return response.data;
   } catch (error) {
