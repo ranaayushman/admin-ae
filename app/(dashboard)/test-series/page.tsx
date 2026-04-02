@@ -326,7 +326,12 @@ export default function TestSeriesPage() {
               className="max-w-xs"
             />
             <span className="text-sm font-medium text-gray-700">Status:</span>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) =>
+                setStatusFilter(value as "all" | "UPCOMING" | "LIVE" | "COMPLETED")
+              }
+            >
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
