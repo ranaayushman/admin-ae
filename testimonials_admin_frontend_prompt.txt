@@ -1,0 +1,480 @@
+================================================================================
+  FRONTEND IMPLEMENTATION PROMPT: TESTIMONIALS — ADMIN PANEL
+  Aspiring Engineers Platform
+================================================================================
+
+OVERVIEW
+--------
+Implement a full Testimonials Management section inside the Admin Dashboard of
+the frontend. The admin must be able to CREATE, VIEW (list + detail), UPDATE,
+change STATUS, and DELETE testimonials. All admin routes require a Bearer JWT
+token sent as  Authorization: Bearer <token>  in the request header.
+
+BASE URL
+--------
+Use the environment variable:  VITE_API_BASE_URL  (or whatever your project
+already uses).  All endpoints below are relative to that base.
+
+STATUS ENUM
+-----------
+Testimonial status can be one of three values (string literals):
+  "pending"   — awaiting review
+  "approved"  — visible on the public website
+  "rejected"  — hidden; rejection reason is stored
+
+================================================================================
+  ENDPOINT REFERENCE
+================================================================================
+
+─────────────────────────────────────────────────────────────────────────────
+1. LIST ALL TESTIMONIALS (with filters & pagination)
+─────────────────────────────────────────────────────────────────────────────
+Method : GET
+URL    : /testimonials/admin/all
+Auth   : Bearer token required (Admin role)
+
+Query Parameters (all optional):
+  status     — filter by status: "pending" | "approved" | "rejected"
+  search     — full-text search on studentName, quote, achievementLine, institutionLine
+  page       — page number (default: 1)
+  limit      — items per page (default: 10)
+  sortBy     — field to sort by (default: "displayOrder")
+  sortOrder  — "asc" | "desc" (default: "asc")
+
+Example request:
+  GET /testimonials/admin/all?status=pending&page=1&limit=10&sortBy=createdAt&sortOrder=desc
+
+Success Response — 200 OK:
+{
+  "success": true,
+  "message": "Testimonials retrieved successfully",
+  "data": [
+    {
+      "id": "60d5ec49c1234567890abcde",
+      "studentName": "Rahul Sharma",
+      "quote": "The counselling team helped me understand the choice filling process. I got CSE at NIT Trichy with their guidance!",
+      "achievementLine": "JEE Main AIR 5,432",
+      "institutionLine": "NIT Trichy - CSE",
+      "rating": 5,
+      "avatarUrl": "https://storage.example.com/testimonials/avatar-1.png",
+      "status": "approved",
+      "displayOrder": 1,
+      "approvedBy": "60d5ec49c1234567890abcdf",
+      "approvedAt": "2026-04-17T10:30:00.000Z",
+      "rejectionReason": null,
+      "createdAt": "2026-04-17T10:00:00.000Z",
+      "updatedAt": "2026-04-17T10:15:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 45,
+    "totalPages": 5
+  }
+}
+
+
+─────────────────────────────────────────────────────────────────────────────
+2. GET SINGLE TESTIMONIAL BY ID
+─────────────────────────────────────────────────────────────────────────────
+Method : GET
+URL    : /testimonials/admin/:id
+Auth   : Bearer token required (Admin role)
+
+Path Params:
+  id  — MongoDB ObjectId of the testimonial (string)
+
+Example request:
+  GET /testimonials/admin/60d5ec49c1234567890abcde
+
+Success Response — 200 OK:
+{
+  "success": true,
+  "message": "Testimonial retrieved successfully",
+  "data": {
+    "id": "60d5ec49c1234567890abcde",
+    "studentName": "Rahul Sharma",
+    "quote": "The counselling team helped me understand the choice filling process. I got CSE at NIT Trichy with their guidance!",
+    "achievementLine": "JEE Main AIR 5,432",
+    "institutionLine": "NIT Trichy - CSE",
+    "rating": 5,
+    "avatarUrl": "https://storage.example.com/testimonials/avatar-1.png",
+    "status": "approved",
+    "displayOrder": 1,
+    "approvedBy": "60d5ec49c1234567890abcdf",
+    "approvedAt": "2026-04-17T10:30:00.000Z",
+    "rejectionReason": null,
+    "createdAt": "2026-04-17T10:00:00.000Z",
+    "updatedAt": "2026-04-17T10:15:00.000Z"
+  }
+}
+
+Error Response — 404 Not Found:
+{
+  "statusCode": 404,
+  "message": "Testimonial not found"
+}
+
+
+─────────────────────────────────────────────────────────────────────────────
+3. CREATE TESTIMONIAL (Admin)
+─────────────────────────────────────────────────────────────────────────────
+Method : POST
+URL    : /testimonials/admin
+Auth   : Bearer token required (Admin role)
+Content-Type: application/json
+
+Request Body:
+{
+  "studentName":    "Rahul Sharma",             // REQUIRED — string, max 120 chars
+  "quote":          "The counselling team...",   // REQUIRED — string, max 1000 chars
+  "achievementLine":"JEE Main AIR 5,432",        // REQUIRED — string, max 160 chars
+  "institutionLine":"NIT Trichy - CSE",          // REQUIRED — string, max 160 chars
+  "rating":         5,                           // OPTIONAL — number 1..5, default 5
+  "avatarBase64":   "data:image/png;base64,...", // OPTIONAL — full base64 data URI of the avatar image
+  "displayOrder":   1,                           // OPTIONAL — number, default 0 (lower = shown first)
+  "status":         "approved"                   // OPTIONAL — "pending"|"approved"|"rejected", default "approved" for admin-created
+}
+
+NOTE: Avatar must be sent as a base64-encoded data URI (not a file upload).
+      Convert the selected image file to base64 in the browser using FileReader
+      and send the full string including the "data:image/...;base64," prefix.
+
+Success Response — 201 Created:
+{
+  "success": true,
+  "message": "Testimonial created successfully",
+  "data": {
+    "id": "60d5ec49c1234567890abcde",
+    "studentName": "Rahul Sharma",
+    "quote": "The counselling team helped me understand the choice filling process. I got CSE at NIT Trichy with their guidance!",
+    "achievementLine": "JEE Main AIR 5,432",
+    "institutionLine": "NIT Trichy - CSE",
+    "rating": 5,
+    "avatarUrl": "https://storage.example.com/testimonials/avatar-1.png",
+    "status": "approved",
+    "displayOrder": 1,
+    "approvedBy": null,
+    "approvedAt": null,
+    "rejectionReason": null,
+    "createdAt": "2026-04-22T08:00:00.000Z",
+    "updatedAt": "2026-04-22T08:00:00.000Z"
+  }
+}
+
+
+─────────────────────────────────────────────────────────────────────────────
+4. UPDATE TESTIMONIAL DETAILS
+─────────────────────────────────────────────────────────────────────────────
+Method : PATCH
+URL    : /testimonials/admin/:id
+Auth   : Bearer token required (Admin role)
+Content-Type: application/json
+
+Path Params:
+  id  — MongoDB ObjectId of the testimonial (string)
+
+Request Body (all fields optional — only send what needs updating):
+{
+  "studentName":    "Rahul Sharma",             // OPTIONAL
+  "quote":          "Updated quote text...",    // OPTIONAL
+  "achievementLine":"JEE Main AIR 5,432",       // OPTIONAL
+  "institutionLine":"NIT Trichy - CSE",         // OPTIONAL
+  "rating":         4,                          // OPTIONAL — number 1..5
+  "avatarBase64":   "data:image/png;base64,...",// OPTIONAL — replaces the existing avatar
+  "displayOrder":   2,                          // OPTIONAL
+  "status":         "approved"                  // OPTIONAL
+}
+
+Success Response — 200 OK:
+{
+  "success": true,
+  "message": "Testimonial updated successfully",
+  "data": {
+    "id": "60d5ec49c1234567890abcde",
+    "studentName": "Rahul Sharma",
+    "quote": "Updated quote text...",
+    "achievementLine": "JEE Main AIR 5,432",
+    "institutionLine": "NIT Trichy - CSE",
+    "rating": 4,
+    "avatarUrl": "https://storage.example.com/testimonials/avatar-updated.png",
+    "status": "approved",
+    "displayOrder": 2,
+    "approvedBy": null,
+    "approvedAt": null,
+    "rejectionReason": null,
+    "createdAt": "2026-04-17T10:00:00.000Z",
+    "updatedAt": "2026-04-22T09:00:00.000Z"
+  }
+}
+
+Error Response — 404 Not Found:
+{
+  "statusCode": 404,
+  "message": "Testimonial not found"
+}
+
+
+─────────────────────────────────────────────────────────────────────────────
+5. UPDATE TESTIMONIAL STATUS (Approve / Reject)
+─────────────────────────────────────────────────────────────────────────────
+Method : PATCH
+URL    : /testimonials/admin/:id/status
+Auth   : Bearer token required (Admin role)
+Content-Type: application/json
+
+Path Params:
+  id  — MongoDB ObjectId of the testimonial (string)
+
+Request Body:
+{
+  "status":          "approved",                       // REQUIRED — "pending"|"approved"|"rejected"
+  "adminNotes":      "Looks genuine, approved.",       // OPTIONAL — internal note (not stored in main field)
+  "rejectionReason": "The submission is incomplete"    // OPTIONAL — required only when status = "rejected"
+}
+
+NOTE: When status is "approved", the backend automatically records:
+      - approvedBy: the logged-in admin's ID
+      - approvedAt: current timestamp
+      When status is "rejected", make sure to send rejectionReason so it is
+      stored and visible to other admins.
+
+Success Response — 200 OK:
+{
+  "success": true,
+  "message": "Testimonial status updated successfully",
+  "data": {
+    "id": "60d5ec49c1234567890abcde",
+    "studentName": "Rahul Sharma",
+    "quote": "The counselling team helped me understand...",
+    "achievementLine": "JEE Main AIR 5,432",
+    "institutionLine": "NIT Trichy - CSE",
+    "rating": 5,
+    "avatarUrl": "https://storage.example.com/testimonials/avatar-1.png",
+    "status": "approved",
+    "displayOrder": 1,
+    "approvedBy": "60d5ec49c1234567890abcdf",
+    "approvedAt": "2026-04-22T09:05:00.000Z",
+    "rejectionReason": null,
+    "createdAt": "2026-04-17T10:00:00.000Z",
+    "updatedAt": "2026-04-22T09:05:00.000Z"
+  }
+}
+
+
+─────────────────────────────────────────────────────────────────────────────
+6. DELETE TESTIMONIAL
+─────────────────────────────────────────────────────────────────────────────
+Method : DELETE
+URL    : /testimonials/admin/:id
+Auth   : Bearer token required (Admin role)
+
+Path Params:
+  id  — MongoDB ObjectId of the testimonial (string)
+
+Success Response — 204 No Content  (empty body)
+
+Error Response — 404 Not Found:
+{
+  "statusCode": 404,
+  "message": "Testimonial not found"
+}
+
+
+─────────────────────────────────────────────────────────────────────────────
+7. PUBLIC — GET APPROVED TESTIMONIALS (read-only, no auth needed)
+─────────────────────────────────────────────────────────────────────────────
+Method : GET
+URL    : /testimonials
+Auth   : None (public)
+
+Query Parameters (all optional):
+  limit  — max number of testimonials to return (default: 20)
+
+Success Response — 200 OK:
+{
+  "success": true,
+  "message": "Testimonials retrieved successfully",
+  "data": [
+    {
+      "id": "60d5ec49c1234567890abcde",
+      "studentName": "Rahul Sharma",
+      "quote": "The counselling team helped me understand the choice filling process...",
+      "achievementLine": "JEE Main AIR 5,432",
+      "institutionLine": "NIT Trichy - CSE",
+      "rating": 5,
+      "avatarUrl": "https://storage.example.com/testimonials/avatar-1.png"
+    }
+  ]
+}
+
+NOTE: This response is intentionally stripped of admin fields (status,
+      displayOrder, approvedBy, rejectionReason, createdAt, updatedAt).
+
+
+================================================================================
+  ADMIN DATA MODELS (TypeScript interfaces for the frontend)
+================================================================================
+
+// Matches the "data" object in every admin response
+export interface TestimonialAdmin {
+  id: string;
+  studentName: string;
+  quote: string;
+  achievementLine: string;
+  institutionLine: string;
+  rating: number;              // 1–5
+  avatarUrl?: string;
+  status: "pending" | "approved" | "rejected";
+  displayOrder: number;
+  approvedBy?: string;         // admin user ID
+  approvedAt?: string;         // ISO date string
+  rejectionReason?: string;
+  createdAt: string;           // ISO date string
+  updatedAt: string;           // ISO date string
+}
+
+export interface PaginatedTestimonialsResponse {
+  success: boolean;
+  message: string;
+  data: TestimonialAdmin[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Payload for creating a testimonial
+export interface CreateTestimonialPayload {
+  studentName: string;         // required
+  quote: string;               // required
+  achievementLine: string;     // required
+  institutionLine: string;     // required
+  rating?: number;             // optional, 1–5
+  avatarBase64?: string;       // optional, full base64 data URI
+  displayOrder?: number;       // optional
+  status?: "pending" | "approved" | "rejected";  // optional
+}
+
+// Payload for updating details (all fields optional)
+export interface UpdateTestimonialPayload extends Partial<CreateTestimonialPayload> {}
+
+// Payload for status change
+export interface UpdateStatusPayload {
+  status: "pending" | "approved" | "rejected";  // required
+  adminNotes?: string;         // optional internal note
+  rejectionReason?: string;    // required when status = "rejected"
+}
+
+
+================================================================================
+  ADMIN UI REQUIREMENTS
+================================================================================
+
+Pages / Sections to Build:
+  1. Testimonials List Page
+     - Table/card list of all testimonials with columns:
+         Avatar | Student Name | Achievement | Institution | Rating | Status | Display Order | Actions
+     - Filter bar: status tabs (All / Pending / Approved / Rejected) + search input
+     - Pagination controls (previous, next, page numbers)
+     - "Add Testimonial" button → opens Create Modal or navigates to Create Page
+     - Row actions: View | Edit | Change Status | Delete
+
+  2. Create Testimonial Modal / Page
+     - Form fields:
+         • Student Name        (text, required)
+         • Quote               (textarea, required)
+         • Achievement Line    (text, required)
+         • Institution Line    (text, required)
+         • Rating              (number input or star selector, 1–5, optional)
+         • Avatar Image        (file picker → convert to base64; show preview, optional)
+         • Display Order       (number input, optional)
+         • Status              (select: pending / approved / rejected, default approved)
+     - On submit → POST /testimonials/admin
+     - Show success toast & refresh list on success
+
+  3. Edit Testimonial Modal / Page
+     - Same form as Create, pre-filled with existing data
+     - On submit → PATCH /testimonials/admin/:id
+     - If user picks a new avatar image, convert it to base64 and send as avatarBase64
+     - If user does NOT change avatar, omit avatarBase64 from the payload
+
+  4. Testimonial Detail / Review Page (optional but recommended)
+     - Show all fields including audit data (approvedBy, approvedAt)
+     - Quick action buttons: Approve / Reject / Edit / Delete
+
+  5. Status Change Modal
+     - Dropdown to pick new status: pending | approved | rejected
+     - Conditional textarea for rejectionReason (shown only when status = "rejected")
+     - On confirm → PATCH /testimonials/admin/:id/status
+
+  6. Delete Confirmation Dialog
+     - "Are you sure?" confirmation before calling DELETE /testimonials/admin/:id
+     - On 204 response → remove item from the list without refetching
+
+Avatar Handling (Frontend):
+  - Use the browser FileReader API to convert the selected image file to a base64
+    data URI:
+      const reader = new FileReader();
+      reader.onload = (e) => setAvatarBase64(e.target.result as string);
+      reader.readAsDataURL(file);
+  - Send the full result string (e.g. "data:image/jpeg;base64,/9j/4AAQSk...")
+    as the avatarBase64 field.
+  - Recommend capping file size to 2MB on the client side to avoid large payloads.
+
+Status Badge Colors (suggested):
+  pending  → yellow / amber
+  approved → green
+  rejected → red
+
+
+================================================================================
+  COMMON ERROR HANDLING
+================================================================================
+
+All error responses follow:
+{
+  "statusCode": <number>,
+  "message": "<string>"
+}
+
+Common status codes to handle:
+  400 — Bad Request (validation failed, or update/delete operation failed internally)
+  401 — Unauthorized (missing or invalid JWT token)
+  403 — Forbidden (token present but user is not an admin)
+  404 — Not Found (testimonial ID does not exist in DB)
+  500 — Internal Server Error
+
+Display user-friendly toast notifications for each error case.
+On 401, redirect the user to the login page and clear the stored token.
+
+
+================================================================================
+  NOTES FOR DEVELOPERS
+================================================================================
+
+1. Auth: Attach the JWT token on every admin request:
+     headers: { Authorization: `Bearer ${token}` }
+
+2. The UpdateTestimonialDto on the backend extends CreateTestimonialDto with
+   all fields made optional (@IsOptional). Only send changed fields in PATCH
+   requests to avoid accidentally overwriting data.
+
+3. displayOrder controls the sort order on the public page: lower number =
+   displayed first. Use it to let admins drag-and-drop reorder (optional
+   advanced feature).
+
+4. The backend stores avatars in a cloud bucket and returns a CDN URL
+   (avatarUrl). The frontend should always display avatarUrl for previews;
+   avatarBase64 is only used during create/update submissions.
+
+5. The public endpoint GET /testimonials returns only approved testimonials
+   sorted by displayOrder ascending. Admins can use this to preview what the
+   public site will show.
+
+================================================================================
+  END OF PROMPT
+================================================================================

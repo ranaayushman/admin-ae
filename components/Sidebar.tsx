@@ -27,6 +27,8 @@ import {
   UsersRound,
   Mail,
   Gift,
+  MessageSquareQuote,
+  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useState } from "react";
@@ -34,9 +36,9 @@ import { logger } from "@/lib/logger";
 
 type NavItem = {
   name: string;
-  icon: any;
+  icon: LucideIcon;
   path?: string;
-  items?: { name: string; path: string; icon: any }[];
+  items?: { name: string; path: string; icon: LucideIcon }[];
 };
 
 const navItems: NavItem[] = [
@@ -44,6 +46,7 @@ const navItems: NavItem[] = [
   { name: "All Users", icon: UsersRound, path: "/users" },
   { name: "Question Bank", icon: HelpCircle, path: "/questions" },
   { name: "Newsletter", icon: Mail, path: "/newsletter" },
+  { name: "Testimonials", icon: MessageSquareQuote, path: "/testimonials" },
   { name: "Refer & Earn", icon: Gift, path: "/referrals" },
   { name: "Test Series", icon: ListChecks, path: "/test-series" },
   { name: "Manual Enrollment", icon: Users, path: "/enrollments/manual" },
@@ -199,9 +202,6 @@ export default function Sidebar({
             if (item.items) {
               // Render Group
               const isActive = isGroupActive(item);
-              const isExpanded = expandedGroups.includes(item.name) || isActive; // Auto expand if active child? explicit expand might be better UX, but let's see. Let's make it explicit toggle for now, but auto-open if path matches initially could be added. 
-              // Actually, simpler: toggle only controls generic expansion. 
-              // Let's rely on state. 
               const expanded = expandedGroups.includes(item.name);
 
               return (
