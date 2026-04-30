@@ -27,11 +27,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Download, ExternalLink, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  Download,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import {
   certificateService,
   type Certificate,
 } from "@/lib/services/certificate.service";
+import { handleApiError } from "@/lib/services/api.client";
 
 const domainNames: Record<string, string> = {
   "web-dev": "Web Development",
@@ -45,6 +52,7 @@ const domainNames: Record<string, string> = {
 export default function IssuedCertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
 
   useEffect(() => {
@@ -54,12 +62,14 @@ export default function IssuedCertificatesPage() {
   const fetchCertificates = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await certificateService.getAllIssuedCertificates();
       setCertificates(data || []);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to load certificates"
-      );
+      const errorMessage = handleApiError(err);
+      setError(errorMessage);
+      setCertificates([]);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -91,6 +101,28 @@ export default function IssuedCertificatesPage() {
         </CardHeader>
 
         <CardContent>
+          {error ? (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="pt-6 flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 text-red-600" />
+                <div className="flex-1">
+                  <p className="font-medium text-red-900">Failed to load certificates</p>
+                  <p className="mt-1 text-sm text-red-700">{error}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={fetchCertificates}
+                    disabled={loading}
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    Try Again
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />

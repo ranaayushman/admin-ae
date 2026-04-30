@@ -2,6 +2,12 @@ export interface InternshipApplication {
   _id: string;
   name?: string;
   fullName?: string; // Alternate key
+  email?: string;
+  userId?: {
+    _id: string;
+    name?: string;
+    email?: string;
+  };
   phone: string;
   college?: string;
   collegeName?: string; // Alternate key

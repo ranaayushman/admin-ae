@@ -42,6 +42,10 @@ export default function InternshipApplicationsPage() {
   const [total, setTotal] = useState(0);
   const limit = 10;
 
+  const getApplicationEmail = (app: InternshipApplication) => {
+    return app.userId?.email || app.email || "-";
+  };
+
   // Fetch applications
   const fetchApplications = useCallback(async () => {
     try {
@@ -77,6 +81,7 @@ export default function InternshipApplicationsPage() {
 
     const headers = [
       "Name",
+      "Email",
       "Phone",
       "College",
       "Father's Name",
@@ -90,6 +95,7 @@ export default function InternshipApplicationsPage() {
 
     const rows = applications.map(app => [
       app.name || app.fullName || "-",
+      getApplicationEmail(app),
       app.phone,
       app.college || app.collegeName || "-",
       app.fathersName || app.fatherName || "-",
@@ -133,11 +139,12 @@ export default function InternshipApplicationsPage() {
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
 
     const headers = [
-      ["Name", "Type", "College", "Branch", "Year", "Phone"]
+      ["Name", "Email", "Type", "College", "Branch", "Year", "Phone"]
     ];
 
     const data = applications.map(app => [
       app.name || app.fullName || "-",
+      getApplicationEmail(app),
       app.internshipType || "-",
       app.college || app.collegeName || "-",
       app.branch,
@@ -229,6 +236,7 @@ export default function InternshipApplicationsPage() {
               <TableRow key={app._id}>
                 <TableCell>
                   <div className="font-medium">{app.name || app.fullName || "-"}</div>
+                  <div className="text-xs text-muted-foreground">{getApplicationEmail(app)}</div>
                   <div className="text-xs text-muted-foreground">{app.phone}</div>
                   <div className="text-xs text-muted-foreground">Father: {app.fathersName || app.fatherName || "-"}</div>
                 </TableCell>
@@ -271,22 +279,37 @@ export default function InternshipApplicationsPage() {
             <div className="text-sm text-muted-foreground">
               Page {currentPage} of {totalPages}
             </div>
-            <div className="flex gap-2">
-               <Button
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Previous
               </Button>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                <Button
+                  key={pageNumber}
+                  variant={pageNumber === currentPage ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNumber)}
+                  disabled={pageNumber === currentPage}
+                >
+                  {pageNumber}
+                </Button>
+              ))}
+
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4 mr-2" />
+                Next
               </Button>
             </div>
           </div>

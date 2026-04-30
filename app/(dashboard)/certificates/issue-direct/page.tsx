@@ -19,8 +19,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Info, Loader2 } from "lucide-react";
+import { AlertCircle, Info, Loader2 } from "lucide-react";
 import { certificateService } from "@/lib/services/certificate.service";
+import { handleApiError } from "@/lib/services/api.client";
 
 export default function IssueCertificatePage() {
   const [formData, setFormData] = useState({
@@ -29,6 +30,7 @@ export default function IssueCertificatePage() {
     overrideName: "",
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -43,12 +45,15 @@ export default function IssueCertificatePage() {
     e.preventDefault();
 
     if (!formData.email || !formData.domain) {
-      toast.error("Please fill in all required fields");
+      const message = "Please fill in all required fields";
+      setError(message);
+      toast.error(message);
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       const data = await certificateService.issueDirectCertificate({
         email: formData.email,
         domain: formData.domain as
@@ -63,7 +68,9 @@ export default function IssueCertificatePage() {
       toast.success(`Certificate issued! ID: ${data.certificateId}`);
       setFormData({ email: "", domain: "", overrideName: "" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to issue certificate");
+      const message = handleApiError(err);
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -89,6 +96,16 @@ export default function IssueCertificatePage() {
             </CardHeader>
 
             <CardContent>
+              {error ? (
+                <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+                  <div>
+                    <p className="font-medium text-red-900">Unable to issue certificate</p>
+                    <p className="mt-1 text-red-700">{error}</p>
+                  </div>
+                </div>
+              ) : null}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <Label htmlFor="email" className="font-medium">
@@ -100,7 +117,10 @@ export default function IssueCertificatePage() {
                     type="email"
                     placeholder="Enter user email"
                     value={formData.email}
-                    onChange={handleInputChange}
+                    onChange={(event) => {
+                      setError(null);
+                      handleInputChange(event);
+                    }}
                     disabled={loading}
                     className="mt-2"
                     required
@@ -138,7 +158,10 @@ export default function IssueCertificatePage() {
                     name="overrideName"
                     placeholder="Leave blank to use user's registered name"
                     value={formData.overrideName}
-                    onChange={handleInputChange}
+                    onChange={(event) => {
+                      setError(null);
+                      handleInputChange(event);
+                    }}
                     disabled={loading}
                     className="mt-2"
                   />
